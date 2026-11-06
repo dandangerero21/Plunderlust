@@ -1,2 +1,0 @@
-D:\DANDAN CODING\UNITY PROJECTS\final project\Plunderlust\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\CMakeLists.txt
-D:\DANDAN CODING\UNITY PROJECTS\final project\Plunderlust\Library\Bee\Android\Prj\IL2CPP\Gradle\unityLibrary\src\main\cpp\GameActivity\CMakeLists.txt
