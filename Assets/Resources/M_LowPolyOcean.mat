@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-1782896863134049590
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Editor::UnityEditor.Rendering.Universal.AssetVersion
+  version: 10
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: M_LowPolyOcean
+  m_Shader: {fileID: 4800000, guid: 4b29f0c2a874b9442a98e20f12c8e31a, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _DepthDistance: 9.0
+    - _FoamDistance: 2.6
+    - _FoamNoiseScale: 0.45
+    - _FoamSpeed: 0.65
+    - _CausticScale: 0.28
+    - _CausticSpeed: 0.38
+    - _CausticStrength: 0.48
+    - _SunSpecularGloss: 90.0
+    - _SunSpecularIntensity: 2.2
+    - _FresnelPower: 4.0
+    - _CrestThreshold: 0.40
+    - _CrestFoamIntensity: 0.65
+    - _Wave1Wavelength: 36.0
+    - _Wave1Amplitude: 0.12
+    - _Wave1Speed: 1.8
+    - _Wave1Steepness: 0.05
+    - _Wave2Wavelength: 15.0
+    - _Wave2Amplitude: 0.05
+    - _Wave2Speed: 1.3
+    - _Wave2Steepness: 0.03
+    m_Colors:
+    - _DeepColor: {r: 0.04, g: 0.18, b: 0.35, a: 0.98}
+    - _MidColor: {r: 0.07, g: 0.48, b: 0.62, a: 0.95}
+    - _ShallowColor: {r: 0.12, g: 0.78, b: 0.75, a: 0.90}
+    - _CrestColor: {r: 0.35, g: 0.88, b: 0.85, a: 1.00}
+    - _FoamColor: {r: 0.95, g: 0.99, b: 1.00, a: 1.00}
+    - _SunSpecularColor: {r: 1.00, g: 0.96, b: 0.82, a: 1.00}
+    - _FresnelColor: {r: 0.20, g: 0.65, b: 0.78, a: 1.00}
+    - _Wave1Direction: {r: 1.0, g: 0.35, b: 0.0, a: 0.0}
+    - _Wave2Direction: {r: -0.4, g: 0.90, b: 0.0, a: 0.0}
+  m_BuildTextureStacks: []

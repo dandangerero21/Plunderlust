@@ -1,0 +1,102 @@
+<USER_REQUEST>
+# ROLE & OBJECTIVE
+You are a Principal Unity 6 (C#) Systems Architect and Naval Physics Programmer. We are building a complete, mobile-optimized, 3rd-person pixelated open-world Pirate Action-RPG inspired by *Sid Meier's Pirates!* and *FTL's* subsystem management, built around the **Kenney Pirate Kit** modular asset pack.
+
+Because a full game cannot fit in a single response without degrading into useless pseudocode, you will build this codebase across strict, modular phases. Every script you output must be 100% complete, compilable, dependency-free C# with zero `// TODO` stubs, zero `FindObjectOfType` in loops, and zero heap allocations (`new`) inside `Update` or `FixedUpdate`.
+
+---
+
+# 1. CORE TECHNICAL & MOBILE CONSTRAINTS
+- **Engine & Pipeline:** Unity 6 (6000.0+), Universal Render Pipeline (URP), C# 10+.
+- **Visual Style (3D Pixelated Low-Poly):**
+  - Uses Kenney Pirate Kit FBX models sharing a single palette material (SRP Batcher compatible).
+  - Camera renders through URP Render Scale `0.25f` with `UpscalingFilterSelection.Point` (Nearest-Neighbor) so the 3D world renders as crisp pixel art while UI overlays render at native mobile resolution.
+- **Mobile Performance Laws:**
+  - **Deterministic Analytical Ocean:** Wave elevation is calculated via a deterministic dual-Gerstner/Sine wave formula shared identically between a static C# class (`OceanWaveManager.GetWaveHeight(float x, float z, float time)`) and the water mesh vertex shader.
+  - **Zero GC Spikes:** Pre-allocate primitive arrays (`T[]`) and custom object pools for cannonballs, muzzle smoke, floating loot crates, and NPC ships.
+  - **Data Architecture:** Use explicit Data Transfer Objects (DTOs) for save state and `ScriptableObject` definitions for Ship Hulls, Subsystems, Crew Specialists, Factions, and Trade Goods.
+
+---
+
+# 2. SYSTEM ARCHITECTURE & REQUIRED MODULES
+
+## Module A: Analytical Ocean, 4-Point Buoyancy & Bilge Flooding (`OceanWaveManager` & `BuoyancyBody`)
+- **Wave Math:** Deterministic stateless function returning wave height `Y` and surface normal `Vector3` at any world `(X, Z)` coordinate.
+- **Multi-Probe Buoyancy:** Every ship and floating loot crate has a `Rigidbody` and an array of 4 to 6 submerged probe transforms (Bow, Stern, Port, Starboard).
+- In `FixedUpdate`, compare each probe's world `Y` against `OceanWaveManager.GetWaveHeight`. If submerged (`depth > 0`), apply upward Archimedes force via `rb.AddForceAtPosition` proportional to displaced volume, plus velocity-opposing water drag and angular damping.
+- **Dynamic Flooding Mass:** `BuoyancyBody` exposes a `FloodingRatio [0f .. 1f]` driven by Hull breaches. As flooding increases, `Rigidbody.mass` scales upward and buoyancy force scales down, causing a leaking ship to physically ride lower in the water and list heavily before sinking.
+
+## Module B: Sailing, Wind & Subsystem-Driven Locomotion (`ShipLocomotionController` & `WindManager`)
+- **Global Wind:** `WindManager` smoothly rotates a global wind direction vector and wind strength scalar `[0.2f .. 1.0f]`.
+- **Sail State Machine:** `Anchored` (0%), `Rowing / Oars` (Starter Rowboat wind-independent propulsion), `Battle Sails` (50% speed, tight turning), and `Full Canvas` (100% speed, wind-angle multiplier).
+- **Subsystem Penalties:**
+  - Max thrust is multiplied by `ShipSubsystemController.SailsEfficiency [0.15f .. 1.0f]` and `CrewManager.SailHandlingEfficiency`.
+  - Rudder torque is multiplied by `ShipSubsystemController.RudderEfficiency [0.1f .. 1.0f]`. If Rudder health is below 25%, inject periodic angular noise so the ship pulls unpredictably.
+
+## Module C: Localized Ship Parts Status, Broadside Combat & Pillaging (`ShipSubsystemController`, `NavalCombatController`, `LootableWreck`)
+- **4 Localized Ship Subsystems (Each `0%` to `100%` Integrity):**
+  1. **Hull & Planking:** Hit by lower-deck water-line shots. Below 50% integrity, the ship springs active leaks (`LeakRate` increases `BilgeWater` per second). At 0% Hull or 100% Bilge Water, the ship enters the `Sinking` state.
+  2. **Sails & Rigging:** Hit by high-elevation shots above deck level. Directly reduces top speed and acceleration. Below 20% integrity, the mast mesh visually tilts/swaps to a broken state and locks sail state out of `Full Canvas`.
+  3. **Rudder & Helm:** Hit by stern-raking shots (hits within the rear 20% bounding box of the hull). Cripples turn rate.
+  4. **Gun Deck (Port & Starboard Batteries):** Hit by mid-deck broadsides. Dynamically disables individual cannon barrels on that side (e.g., at 50% Gun Deck integrity, a 6-cannon battery only fires 3 cannons) and increases reload cooldown.
+- **Aiming & Ballistics:**
+  - Holding Port or Starboard fire projects a 3D aiming arc on the water. Dragging up/down adjusts pitch (allowing players to intentionally aim high at Sails/Rigging or low at the Hull waterline).
+- **Pillaging & Floating Loot:**
+  - Sinking a ship spawns 2–4 buoyant `LootCrate` objects containing Gold, Timber/Canvas (used for at-sea part repairs), Trade Goods, or Treasure Maps.
+
+## Module D: Crew Management, Tavern Hiring & Officer Specialties (`CrewManager`, `CrewSpecialistSO`, `TavernRecruitment`)
+- **General Deckhands & Manpower Efficiency:**
+  - Each ship hull defines `MinRequiredCrew` and `MaxCrewCapacity` (e.g., Rowboat: 1/2; Cutter: 4/12; Brigantine: 10/30; Galleon: 25/80).
+  - Broadside hits to the Gun Deck or Hull have a calculated chance to cause crew casualties.
+  - If `CurrentDeckhands < MinRequiredCrew`, global reload speed, sail transition speed, and bilge pumping rate suffer a proportional manpower penalty down to `35%` efficiency.
+- **5 Officer Specialty Slots (Hired at Port Taverns):**
+  - Taverns generate a seeded roster of hireable Specialists (`Common`, `Veteran`, `Legendary` tiers) with a hiring cost in Gold and a passive stat modifier:
+  1. **Carpenter (Hull & Repair Specialist):** Passively consumes `Timber` from cargo to repair **Hull** and **Rudder** integrity over time (`+X% HP/sec` out of combat, `0.25x` rate in combat).
+  2. **Boatswain / Bosun (Bilge & Deckhand Specialist):** Operates bilge pumps to drain `BilgeWater` faster than leaks accumulate, and reduces crew casualty probability during enemy broadsides by `15%–40%`.
+  3. **Master Gunner (Ordnance Specialist):** Reduces broadside reload time by `10%–35%`, tightens cannonball spread, and repairs disabled **Gun Deck** cannons between volleys.
+  4. **Sailmaster (Rigging & Wind Specialist):** Passively consumes `Canvas` to mend **Sails & Rigging** at sea, and improves close-hauled wind efficiency when sailing against the wind.
+  5. **Quartermaster (Loot & Economy Specialist):** Increases Gold and Repair Supplies salvaged from pillaged `LootCrates` by `15%–50%` and lowers Port Bribe and Shipyard upgrade costs.
+
+## Module E: Factions, Reputation & Bounty System (`FactionManager` & `ReputationMatrix`)
+- **4 Core Factions:** `Imperial Navy`, `Merchant Guild`, `Corsair Brethren`, `Freeport Traders`.
+- **Relational Matrix (`[-100 .. +100]`):** Attacking one faction shifts standing across others.
+- **Standing Tiers:** `Hunted` (spawns Navy hunter squadrons), `Hostile` (port forts open fire), `Neutral`, `Friendly` (discounts on Tavern hiring and Shipyard repairs), `Privateer Ally`.
+
+## Module F: Open-World Streaming, Floating Origin & Treasure Hunting (`WorldChunkManager`, `FloatingOrigin`, `TreasureManager`)
+- **Archipelago Chunk Streaming:** `400m x 400m` grid chunks streamed in a 3x3 active ring around the player.
+- **Floating Origin:** Shifts all active world objects and increments `OceanWaveManager.WorldOffset` when distance exceeds `2000m` from `(0,0,0)`.
+- **Treasure System:** Excavate high-value chests at island coordinates decoded from pillaged `TreasureMapDTO` drops.
+
+## Module G: Shipyard Progression, Tavern UI & Port Economy (`ShipyardManager` & `PortMarket`)
+- **4 Ship Tiers (Kenney Models):** Tier 1 *Leaky Rowboat* -> Tier 2 *Coastal Cutter* -> Tier 3 *Pirate Brigantine* -> Tier 4 *Royal Galleon*.
+- **Port Actions:**
+  - **Shipyard:** Full instant repair of all 4 Ship Parts (Hull, Sails, Rudder, Gun Deck), permanent hull upgrades, and purchasing larger ships.
+  - **Tavern:** Replenish lost Deckhands (per-head Gold cost), browse and hire/dismiss the 5 Officer Specialties, and buy Treasure Rumors.
+  - **Merchant Dock:** Sell pillaged cargo and stock up on `Timber` and `Canvas` for mid-ocean subsystem repairs.
+
+## Module H: Naval AI & Subsystem Targeting (`NavalAIManager` & `AIShipBrain`)
+- **Tactical Broadside Orbit:** AI ships calculate an orbital tangent `45m` off the player's beam to align broadsides.
+- **Subsystem Targeting Logic:**
+  - `Imperial Navy` hunters aim high at the player's **Sails & Rigging** first until player sail integrity drops below 50% (to prevent escape), then switch to low waterline shots to sink the **Hull**.
+  - `Corsair Brethren` pirates aim mid-deck to cripple the player's **Gun Deck** and crew before closing in.
+
+## Module I: 3rd-Person Naval Camera & Mobile Touch HUD (`NavalCameraController` & `PirateMobileHUD`)
+- **Ship Status Paper-Doll Widget:** Compact corner UI silhouette of the player's ship showing color-coded real-time status (`Green` -> `Yellow` -> `Red` -> `Broken`) for **Sails**, **Hull**, **Rudder**, and **Cannons**, plus a rising blue **Bilge Water** bar and **Crew Count (`Current / Max`)**.
+- **Emergency Repair Toggle:** One-tap HUD button allowing the player to order the Carpenter and Sailmaster to burn `Timber` and `Canvas` for accelerated emergency repairs at sea.
+
+---
+
+# 3. EXECUTION PROTOCOL
+Do NOT output high-level summaries or incomplete classes. We will build this game in 6 sequential phases:
+- **Phase 1:** Core DTOs/ScriptableObjects, `OceanWaveManager`, `BuoyancyBody` (with Bilge Flooding physics), `WindManager`, and `ShipLocomotionController` (with Sail/Rudder subsystem multipliers).
+- **Phase 2:** `ShipSubsystemController` (localized hit detection for Hull, Sails, Rudder, Gun Deck + active leak/bilge math), `NavalCombatController`, `ProjectilePool`, and `LootableWreck`.
+- **Phase 3:** `CrewManager` (Deckhand manpower math + casualties), `CrewSpecialistSO` (Carpenter, Bosun, Master Gunner, Sailmaster, Quartermaster), and `TavernRecruitment`.
+- **Phase 4:** `FactionManager`, `ReputationMatrix`, and `NavalAIManager` / `AIShipBrain` (with broadside orbiting and subsystem targeting).
+- **Phase 5:** `WorldChunkManager`, `FloatingOrigin`, `TreasureManager`, `ShipyardManager`, `PortMarket`, and JSON Save/Load persistence.
+- **Phase 6:** `NavalCameraController`, `PirateMobileHUD` (Touch Helm, Sail Slider, Broadside Aim, Ship Subsystem Paper-Doll UI, Tavern Roster UI), and Master `GameBootstrap`.
+
+Acknowledge this architecture and immediately generate **Phase 1** in full, compilable C# code with step-by-step Unity Inspector setup instructions.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-03T21:25:03+08:00.
+</ADDITIONAL_METADATA>

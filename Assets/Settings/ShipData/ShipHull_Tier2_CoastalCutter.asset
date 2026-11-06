@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e48b4477575a7e941859cef1fd45ef49, type: 3}
+  m_Name: ShipHull_Tier2_CoastalCutter
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.Core.Data.ShipHullDataSO
+  _tier: 2
+  _shipClassName: Coastal Cutter
+  _description: Swift fore-and-aft rigged sloop with agile helm authority for coastal
+    raiding.
+  _modelPrefab: {fileID: 0}
+  _baseMass: 1400
+  _maxFloodingMass: 2400
+  _linearDrag: 0.85
+  _angularDrag: 2
+  _centerOfMassOffset: {x: 0, y: -0.6, z: 0}
+  _probeSubmersionDepth: 1.1
+  _buoyantForcePerProbe: 8500
+  _sinkingBuoyancyRetention: 0.25
+  _waterlineOffset: 0.15
+  _reserveBuoyancyScale: 2.2
+  _surfaceAlignmentTorque: 8
+  _supportsRowing: 0
+  _supportsSails: 1
+  _fullCanvasMaxSpeed: 13
+  _battleSailsMaxSpeed: 6.8
+  _rowingSpeed: 2.5
+  _forwardAcceleration: 4.8
+  _reverseSpeed: 2
+  _rudderTorque: 7.5
+  _rudderResponsivenessBattleSails: 1.4
+  _turnBankingFactor: 0.35
+  _maxHullHealth: 450
+  _maxSailsHealth: 280
+  _maxRudderHealth: 240
+  _maxGunDeckHealth: 320
+  _maxBilgeWaterCapacity: 950
+  _baseLeakRatePerSec: 22
+  _minRequiredCrew: 4
+  _maxCrewCapacity: 12
+  _portCannonsCount: 2
+  _starboardCannonsCount: 2
+  _cannonReloadBaseTime: 5
+  _cargoCapacity: 45
