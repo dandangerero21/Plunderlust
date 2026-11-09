@@ -7,6 +7,17 @@
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
 /[Mm]emoryCaptures/
+.utmp/
+.plastic/
+
+# Unity IL2CPP & Burst build artifacts (DO NOT COMMIT)
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+*_BackUpThisFolder_ButDontShipItWithYourBuild/
+*_BurstDebugInformation_DoNotShip/
+
+# Logs and scratch
+*.log
+scratch/
 
 # Visual Studio / VS Code / Rider cache
 .vs/
