@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Plunderlust.AI;
 using Plunderlust.Cargo;
 using Plunderlust.Core.Data;
+using Plunderlust.Quests;
 using Plunderlust.Ship;
 using Plunderlust.Subsystems;
 using Plunderlust.Wind;
@@ -49,6 +50,8 @@ namespace Plunderlust.UI
         private Texture2D _portBlipTex;
         private Texture2D _islandBlipTex;
         private Texture2D _treasureBlipTex;
+        private Texture2D _bountyBlipTex;
+        private Texture2D _waypointNeedleTex;
         private Texture2D _chartParchmentTex;
         private Texture2D _chartBorderTex;
         private Texture2D _windArrowTex;
@@ -107,6 +110,8 @@ namespace Plunderlust.UI
             _portBlipTex = MakeCircleTex(24, new Color(0.2f, 0.55f, 0.85f), Color.white, 2.5f);
             _islandBlipTex = MakeCircleTex(28, new Color(0.55f, 0.45f, 0.30f), NauticalUITheme.BrassDark, 2f);
             _treasureBlipTex = MakeCircleTex(24, NauticalUITheme.GoldAccent, NauticalUITheme.CrimsonBlood, 2.5f);
+            _bountyBlipTex = MakeCircleTex(30, NauticalUITheme.GoldAccent, NauticalUITheme.CrimsonBlood, 3.5f);
+            _waypointNeedleTex = MakeArrowTex(28, 44, NauticalUITheme.GoldAccent);
             _chartParchmentTex = MakeSolidTex(NauticalUITheme.ParchmentBase);
             _chartBorderTex = MakeSolidTex(NauticalUITheme.MahoganyDark);
             _windArrowTex = MakeArrowTex(30, 80, NauticalUITheme.GoldAccent);
@@ -395,7 +400,7 @@ namespace Plunderlust.UI
 
                 // 3b. Wind Speed HUD Badge (Prominently displayed right below the compass bezel)
                 float windKnots = WindManager.Instance.WindStrength * 16f * 1.94384f;
-                Rect badgeRect = new Rect(radarX, radarY + _minimapSize + 4f, _minimapSize, 28f);
+                Rect badgeRect = new Rect(radarX, radarY + _minimapSize + 4f, _minimapSize, 26f);
 
                 GUI.color = NauticalUITheme.MahoganyDark;
                 GUI.DrawTexture(badgeRect, _compassRingTex);
@@ -405,10 +410,33 @@ namespace Plunderlust.UI
                 GUI.color = Color.white;
 
                 string speedColor = windKnots >= 16f ? "#FFD700" : windKnots >= 10f ? "#E5A93C" : "#C0C0C0";
-                GUI.Label(badgeRect, $"💨 <b>WIND: <color={speedColor}>{windKnots:F0} KTS</color></b>", _windBadgeStyle);
+                GUI.Label(badgeRect, $"<b>WIND: <color={speedColor}>{windKnots:F0} KTS</color></b>", _windBadgeStyle);
             }
 
-            // 4. Known Ports & Settlements
+            // 3c. Horizon Waypoint Compass Needle (Points towards active target/port/bounty)
+            if (WaypointBeacon.Instance != null && WaypointBeacon.Instance.HasActiveWaypoint)
+            {
+                Vector3 toWp = WaypointBeacon.Instance.WaypointPosition - _playerTransform.position;
+                toWp.y = 0f;
+                float dist = toWp.magnitude;
+                if (dist > 1f)
+                {
+                    float wpAngle = Mathf.Atan2(toWp.x, toWp.z) * Mathf.Rad2Deg;
+                    Matrix4x4 prevMatrix = GUI.matrix;
+                    GUIUtility.RotateAroundPivot(wpAngle, center);
+
+                    float needleW = 20f;
+                    float needleH = 26f;
+                    Rect needleRect = new Rect(center.x - (needleW * 0.5f), center.y - radius - 5f, needleW, needleH);
+                    GUI.color = NauticalUITheme.GoldAccent;
+                    GUI.DrawTexture(needleRect, _waypointNeedleTex, ScaleMode.ScaleToFit);
+
+                    GUI.matrix = prevMatrix;
+                    GUI.color = prevColor;
+                }
+            }
+
+            // 4. Known Ports & Settlements (Enlarged 24f for mobile legibility)
             if (_cachedPorts.Count > 0)
             {
                 for (int i = 0; i < _cachedPorts.Count; i++)
@@ -417,14 +445,14 @@ namespace Plunderlust.UI
                     if (p != null)
                     {
                         Texture2D bTex = (p.RulingFaction == FactionType.CorsairBrethren) ? _hostileBlipTex : _portBlipTex;
-                        DrawWorldBlip(center, radius, p.transform.position, bTex, 14f);
+                        DrawWorldBlip(center, radius, p.transform.position, bTex, 24f);
                     }
                 }
             }
             else
             {
-                DrawWorldBlip(center, radius, new Vector3(45f, 0f, 25f), _portBlipTex, 14f);
-                DrawWorldBlip(center, radius, new Vector3(-120f, 0f, 180f), _hostileBlipTex, 14f);
+                DrawWorldBlip(center, radius, new Vector3(45f, 0f, 25f), _portBlipTex, 24f);
+                DrawWorldBlip(center, radius, new Vector3(-120f, 0f, 180f), _hostileBlipTex, 24f);
             }
 
             for (int i = 0; i < _cachedCoves.Count; i++)
@@ -432,7 +460,7 @@ namespace Plunderlust.UI
                 Port.SmugglerCoveOutpost c = _cachedCoves[i];
                 if (c != null)
                 {
-                    DrawWorldBlip(center, radius, c.transform.position, _neutralBlipTex, 11f);
+                    DrawWorldBlip(center, radius, c.transform.position, _neutralBlipTex, 18f);
                 }
             }
 
@@ -440,31 +468,64 @@ namespace Plunderlust.UI
             bool hasTreasureMap = _playerCargo != null && _playerCargo.GetItemCount(CargoItemType.TreasureMap) > 0;
             if (hasTreasureMap && TreasureManager.Instance != null && TreasureManager.Instance.GetNearestTreasureLocation(out Vector3 tPos))
             {
-                DrawWorldBlip(center, radius, tPos, _treasureBlipTex, 14f);
+                DrawWorldBlip(center, radius, tPos, _treasureBlipTex, 22f);
             }
 
-            // 6. NPC Ships Blips (Pirates = Crimson, Merchants = Gold)
+            // 6. NPC Ships Blips (Enlarged 20f, Pirates = Crimson, Merchants = Gold)
             for (int i = 0; i < _cachedAIShips.Count; i++)
             {
                 AIShipBrain ship = _cachedAIShips[i];
                 if (ship == null || !ship.gameObject.activeInHierarchy) continue;
 
                 Texture2D blipTex = (ship.Faction == FactionType.CorsairBrethren) ? _hostileBlipTex : _neutralBlipTex;
-                DrawWorldBlip(center, radius, ship.transform.position, blipTex, 10f);
+                DrawWorldBlip(center, radius, ship.transform.position, blipTex, 20f);
             }
 
-            // 7. Player Ship Indicator at Compass Center (Green Hull Blip with Yaw Heading Pip)
-            GUI.DrawTexture(new Rect(center.x - 7f, center.y - 7f, 14f, 14f), _playerBlipTex);
+            // 6b. Active Bounty Target Blip (Pulsing high-priority gold target blip)
+            if (BountyQuestManager.Instance != null && BountyQuestManager.Instance.ActiveBounty != null)
+            {
+                Vector3 targetPos = BountyQuestManager.Instance.ActiveBounty.TargetSpawnLocation;
+                BountyTargetMarker marker = Object.FindAnyObjectByType<BountyTargetMarker>();
+                if (marker != null) targetPos = marker.transform.position;
+
+                float pulse = 24f + Mathf.PingPong(Time.time * 10f, 6f);
+                DrawWorldBlip(center, radius, targetPos, _bountyBlipTex, pulse);
+            }
+
+            // 7. Player Ship Indicator at Compass Center (Enlarged Green Hull Blip with Yaw Heading Pip)
+            GUI.DrawTexture(new Rect(center.x - 11f, center.y - 11f, 22f, 22f), _playerBlipTex);
             float headingRad = _playerTransform.eulerAngles.y * Mathf.Deg2Rad;
-            Vector2 headPip = center + new Vector2(Mathf.Sin(headingRad), -Mathf.Cos(headingRad)) * 10f;
+            Vector2 headPip = center + new Vector2(Mathf.Sin(headingRad), -Mathf.Cos(headingRad)) * 14f;
             GUI.color = Color.white;
-            GUI.DrawTexture(new Rect(headPip.x - 3f, headPip.y - 3f, 6f, 6f), _windArrowTex);
+            GUI.DrawTexture(new Rect(headPip.x - 4f, headPip.y - 4f, 8f, 8f), _windArrowTex);
             GUI.color = prevColor;
 
-            // 8. Bottom Touch Button: Tap to Open Full Sea Chart (Placed cleanly below the Wind Speed Badge)
-            float chartBtnY = (WindManager.Instance != null) ? (radarY + _minimapSize + 34f) : (radarY + _minimapSize + 4f);
-            Rect btnRect = new Rect(radarX, chartBtnY, _minimapSize, 36f);
-            if (GUI.Button(btnRect, "🗺️ SEA CHART", _closeBtnStyle))
+            // 8. Lower Telemetry Badges & Sea Chart Button
+            float nextY = (WindManager.Instance != null) ? (radarY + _minimapSize + 32f) : (radarY + _minimapSize + 4f);
+
+            // Waypoint Distance HUD Badge
+            if (WaypointBeacon.Instance != null && WaypointBeacon.Instance.HasActiveWaypoint)
+            {
+                float distMeters = WaypointBeacon.Instance.GetDistanceToPlayer();
+                Rect wpBadgeRect = new Rect(radarX, nextY, _minimapSize, 26f);
+
+                GUI.color = NauticalUITheme.MahoganyDark;
+                GUI.DrawTexture(wpBadgeRect, _compassRingTex);
+                GUI.color = NauticalUITheme.BrassBorder;
+                GUI.DrawTexture(new Rect(wpBadgeRect.x, wpBadgeRect.y, wpBadgeRect.width, 1.5f), _compassRingTex);
+                GUI.DrawTexture(new Rect(wpBadgeRect.x, wpBadgeRect.yMax - 1.5f, wpBadgeRect.width, 1.5f), _compassRingTex);
+                GUI.color = Color.white;
+
+                string targetLabel = WaypointBeacon.Instance.WaypointLabel.ToUpper();
+                if (targetLabel.Length > 16) targetLabel = targetLabel.Substring(0, 14) + "..";
+
+                GUI.Label(wpBadgeRect, $"<b>{targetLabel}: <color=#FFD700>{distMeters:F0}m</color></b>", _windBadgeStyle);
+                nextY += 28f;
+            }
+
+            // Bottom Touch Button: Tap to Open Full Sea Chart
+            Rect btnRect = new Rect(radarX, nextY + 2f, _minimapSize, 34f);
+            if (GUI.Button(btnRect, "SEA CHART [M]", _closeBtnStyle))
             {
                 if (SeaChartMapUI.Instance != null)
                 {
@@ -507,7 +568,7 @@ namespace Plunderlust.UI
             GUI.DrawTexture(chartRect, _chartParchmentTex);
 
             // Title & Compass Header
-            GUI.Label(new Rect(chartX, chartY + 14f, _chartWidth, 24f), "⚔️ THE CARIBBEAN ARCHIPELAGO & SEA CHART ⚔️", _chartTitleStyle);
+            GUI.Label(new Rect(chartX, chartY + 14f, _chartWidth, 24f), "THE CARIBBEAN ARCHIPELAGO & SEA CHART", _chartTitleStyle);
             GUI.Label(new Rect(chartX, chartY + 36f, _chartWidth, 16f), "Nautical Chart Grid: 1100m x 1100m Playable Naval Theater", _chartLegendStyle);
 
             // Map Coordinate Bounds & Inner Water Area
@@ -531,47 +592,47 @@ namespace Plunderlust.UI
                 {
                     Port.PortIslandHaven p = _cachedPorts[i];
                     if (p == null) continue;
-                    string icon = p.RulingFaction == FactionType.CorsairBrethren ? "☠️" : "⚓";
+                    string icon = p.RulingFaction == FactionType.CorsairBrethren ? "[C]" : "[P]";
                     Color col = p.RulingFaction == FactionType.CorsairBrethren ? new Color(0.85f, 0.2f, 0.15f) : new Color(0.15f, 0.45f, 0.85f);
                     DrawChartPoint(mapAreaRect, halfWorldSize, p.transform.position, $"{icon} {p.PortName.ToUpper()}", col);
                 }
             }
             else
             {
-                DrawChartPoint(mapAreaRect, halfWorldSize, new Vector3(45f, 0f, 25f), "⚓ PORT ROYAL HAVEN", new Color(0.15f, 0.45f, 0.85f));
-                DrawChartPoint(mapAreaRect, halfWorldSize, new Vector3(-120f, 0f, 180f), "☠️ TORTUGA (Corsair Haven)", new Color(0.85f, 0.2f, 0.15f));
+                DrawChartPoint(mapAreaRect, halfWorldSize, new Vector3(45f, 0f, 25f), "[P] PORT ROYAL HAVEN", new Color(0.15f, 0.45f, 0.85f));
+                DrawChartPoint(mapAreaRect, halfWorldSize, new Vector3(-120f, 0f, 180f), "[C] TORTUGA (Corsair Haven)", new Color(0.85f, 0.2f, 0.15f));
             }
 
             for (int i = 0; i < _cachedCoves.Count; i++)
             {
                 Port.SmugglerCoveOutpost c = _cachedCoves[i];
                 if (c == null) continue;
-                DrawChartPoint(mapAreaRect, halfWorldSize, c.transform.position, $"🪙 {c.CoveName.ToUpper()}", new Color(0.75f, 0.55f, 0.1f));
+                DrawChartPoint(mapAreaRect, halfWorldSize, c.transform.position, $"[S] {c.CoveName.ToUpper()}", new Color(0.75f, 0.55f, 0.1f));
             }
 
             // Plot Player Ship
             Vector3 playerPos = _playerTransform.position;
-            DrawChartPoint(mapAreaRect, halfWorldSize, playerPos, "⛵ FLAGSHIP (You)", new Color(0.1f, 0.6f, 0.2f), true);
+            DrawChartPoint(mapAreaRect, halfWorldSize, playerPos, "[YOU] FLAGSHIP", new Color(0.1f, 0.6f, 0.2f), true);
 
             // Plot Discovered Treasure Island (If holding a map)
             bool hasTreasureMap = _playerCargo != null && _playerCargo.GetItemCount(CargoItemType.TreasureMap) > 0;
             if (hasTreasureMap && TreasureManager.Instance != null && TreasureManager.Instance.GetNearestTreasureLocation(out Vector3 tPos))
             {
-                DrawChartPoint(mapAreaRect, halfWorldSize, tPos, "❌ X MARKS THE SPOT (Treasure Island)", new Color(0.85f, 0.55f, 0.0f));
+                DrawChartPoint(mapAreaRect, halfWorldSize, tPos, "[X] MARKS THE SPOT (Treasure Island)", new Color(0.85f, 0.55f, 0.0f));
             }
 
             // Legend on the Right Sidebar
             float legendX = chartX + _chartWidth - 150f;
             float legendY = chartY + 60f;
             GUI.Label(new Rect(legendX, legendY, 140f, 16f), "<b>CHART LEGEND:</b>", _chartLegendStyle);
-            GUI.Label(new Rect(legendX, legendY + 22f, 140f, 14f), "⚓ Major Ports", _chartLegendStyle);
-            GUI.Label(new Rect(legendX, legendY + 40f, 140f, 14f), "⛵ Your Flagship", _chartLegendStyle);
-            GUI.Label(new Rect(legendX, legendY + 58f, 140f, 14f), "❌ Secret Caches", _chartLegendStyle);
-            GUI.Label(new Rect(legendX, legendY + 76f, 140f, 14f), "🪨 Barrier Reefs", _chartLegendStyle);
+            GUI.Label(new Rect(legendX, legendY + 22f, 140f, 14f), "[P] Major Ports", _chartLegendStyle);
+            GUI.Label(new Rect(legendX, legendY + 40f, 140f, 14f), "[YOU] Flagship", _chartLegendStyle);
+            GUI.Label(new Rect(legendX, legendY + 58f, 140f, 14f), "[X] Treasure", _chartLegendStyle);
+            GUI.Label(new Rect(legendX, legendY + 76f, 140f, 14f), "[-] Barrier Reefs", _chartLegendStyle);
 
             if (WindManager.Instance != null)
             {
-                GUI.Label(new Rect(legendX, legendY + 110f, 140f, 14f), $"<b>WIND:</b> {WindManager.Instance.WindHeadingDegrees:F0}°", _chartLegendStyle);
+                GUI.Label(new Rect(legendX, legendY + 110f, 140f, 14f), $"<b>WIND:</b> {WindManager.Instance.WindHeadingDegrees:F0} deg", _chartLegendStyle);
                 GUI.Label(new Rect(legendX, legendY + 126f, 140f, 14f), $"Strength: {WindManager.Instance.WindStrength * 100:F0}%", _chartLegendStyle);
             }
 

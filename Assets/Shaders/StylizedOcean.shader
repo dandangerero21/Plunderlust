@@ -237,7 +237,8 @@ Shader "Plunderlust/Ocean/StylizedOcean"
                 float time = _Time.y;
 
                 // 1. Scene Depth Sampling for Shorelines and Reef Shallows
-                float2 screenUV = input.screenPos.xy / max(0.0001, input.screenPos.w);
+                float surfaceEyeDepth = input.screenPos.w;
+                float2 screenUV = input.screenPos.xy / max(0.0001, surfaceEyeDepth);
                 
                 // Fallback default depth (deep ocean)
                 float waterDepth = 40.0;
@@ -247,7 +248,6 @@ Shader "Plunderlust/Ocean/StylizedOcean"
                 if (hasDepth)
                 {
                     float sceneEyeDepth = LinearEyeDepth(rawDepth, _ZBufferParams);
-                    float surfaceEyeDepth = input.screenPos.w;
                     waterDepth = max(0.0, sceneEyeDepth - surfaceEyeDepth);
                 }
                 #endif
@@ -304,10 +304,14 @@ Shader "Plunderlust/Ocean/StylizedOcean"
                 float specular = pow(NdotH, _SunSpecularGloss) * _SunSpecularIntensity;
                 baseWaterColor.rgb += mainLight.color * _SunSpecularColor.rgb * specular;
 
-                // 7. Horizon Fresnel Glow
+                // 7. Horizon Fresnel Glow & Distance Horizon Blend
                 float NdotV = saturate(dot(normalWS, viewDirWS));
                 float fresnel = pow(1.0 - NdotV, _FresnelPower);
                 baseWaterColor.rgb = lerp(baseWaterColor.rgb, _FresnelColor.rgb, fresnel * 0.65);
+
+                // ponytail: Distant ocean smoothly merges into the horizon tint so the sea looks endless from any angle
+                float horizonBlend = saturate((surfaceEyeDepth - 450.0) / 750.0);
+                baseWaterColor.rgb = lerp(baseWaterColor.rgb, _FresnelColor.rgb, horizonBlend);
 
                 return baseWaterColor;
             }

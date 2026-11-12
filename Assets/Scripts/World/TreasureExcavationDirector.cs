@@ -119,7 +119,7 @@ namespace Plunderlust.World
             btnTxt.fontStyle = FontStyle.Bold;
             btnTxt.alignment = TextAnchor.MiddleCenter;
             btnTxt.color = NauticalUITheme.InkBlack;
-            btnTxt.text = "⚔️ EXCAVATE TREASURE";
+            btnTxt.text = "EXCAVATE TREASURE";
 
             _excavateButtonRoot.SetActive(false);
 
@@ -160,7 +160,7 @@ namespace Plunderlust.World
             titleTxt.fontStyle = FontStyle.Bold;
             titleTxt.alignment = TextAnchor.MiddleCenter;
             titleTxt.color = NauticalUITheme.InkBlack;
-            titleTxt.text = "👑 BURIED BOOTY UNEARTHED!";
+            titleTxt.text = "BURIED BOOTY UNEARTHED!";
 
             // Summary text
             GameObject sumGo = new GameObject("Summary");
@@ -177,7 +177,7 @@ namespace Plunderlust.World
             _lootSummaryText.alignment = TextAnchor.MiddleCenter;
             _lootSummaryText.color = NauticalUITheme.InkBlack;
             _lootSummaryText.lineSpacing = 1.3f;
-            _lootSummaryText.text = "✦ 650 Gold\n🌿 5x Spices  |  🧣 4x Silk  |  🍾 6x Rum";
+            _lootSummaryText.text = "650 Gold\n5x Spices  |  4x Silk  |  6x Rum";
 
             // Claim Booty Touch Button
             GameObject claimBtnGo = new GameObject("Btn_Claim");
@@ -386,7 +386,7 @@ namespace Plunderlust.World
             // 6. Show Loot Claim Modal
             if (_lootSummaryText != null)
             {
-                _lootSummaryText.text = $"✦ {goldYield} Gold\n🌿 {spicesYield}x Spices  |  🧣 {silkYield}x Silk  |  🍾 {rumYield}x Rum";
+                _lootSummaryText.text = $"{goldYield} Gold\n{spicesYield}x Spices  |  {silkYield}x Silk  |  {rumYield}x Rum";
             }
             if (_lootModalRoot != null)
             {

@@ -13,10 +13,10 @@ namespace Plunderlust.Ocean
     public class WaterGrid : MonoBehaviour
     {
         [Header("Grid Geometry")]
-        [Tooltip("Resolution along each axis. 110 gives crisp low-poly wave curvature.")]
-        [SerializeField] private int _gridResolution = 110;
-        [Tooltip("Total span of dynamic wave surface in meters. 900m generously encloses the contained archipelago.")]
-        [SerializeField] private float _gridSize = 900.0f;
+        [Tooltip("Resolution along each axis. 100 gives crisp low-poly wave curvature.")]
+        [SerializeField] private int _gridResolution = 100;
+        [Tooltip("Total span of dynamic wave surface in meters. 2800m provides an endless open ocean horizon.")]
+        [SerializeField] private float _gridSize = 2800.0f;
         [SerializeField] private Transform _followTarget;
 
         private Mesh _mesh;
@@ -124,19 +124,27 @@ namespace Plunderlust.Ocean
             Vector3[] normals = new Vector3[vertCount];
             Vector2[] uvs = new Vector2[vertCount];
 
-            float step = _gridSize / _gridResolution;
             float halfSize = _gridSize * 0.5f;
 
             int vertIndex = 0;
             for (int z = 0; z <= _gridResolution; z++)
             {
+                // ponytail: non-linear geometric spacing gives dense wave detail near ship (~3-5m) and vast horizon coverage out to 1400m
+                float v = (float)z / _gridResolution;
+                float signedV = (v - 0.5f) * 2.0f;
+                float mappedV = Mathf.Sign(signedV) * Mathf.Pow(Mathf.Abs(signedV), 1.6f);
+                float posZ = mappedV * halfSize;
+
                 for (int x = 0; x <= _gridResolution; x++)
                 {
-                    float posX = (x * step) - halfSize;
-                    float posZ = (z * step) - halfSize;
+                    float u = (float)x / _gridResolution;
+                    float signedU = (u - 0.5f) * 2.0f;
+                    float mappedU = Mathf.Sign(signedU) * Mathf.Pow(Mathf.Abs(signedU), 1.6f);
+                    float posX = mappedU * halfSize;
+
                     _baseVertices[vertIndex] = new Vector3(posX, 0f, posZ);
                     normals[vertIndex] = Vector3.up;
-                    uvs[vertIndex] = new Vector2((float)x / _gridResolution, (float)z / _gridResolution);
+                    uvs[vertIndex] = new Vector2(u, v);
                     vertIndex++;
                 }
             }
@@ -179,9 +187,9 @@ namespace Plunderlust.Ocean
             Vector3 centerPos = _followTarget != null ? _followTarget.position : Vector3.zero;
 
             // Gently snap to increments to prevent wave texture crawling while following the ship
-            float step = _gridSize / _gridResolution;
-            float snappedX = Mathf.Floor(centerPos.x / step) * step;
-            float snappedZ = Mathf.Floor(centerPos.z / step) * step;
+            float snapStep = 2.5f;
+            float snappedX = Mathf.Floor(centerPos.x / snapStep) * snapStep;
+            float snappedZ = Mathf.Floor(centerPos.z / snapStep) * snapStep;
             transform.position = new Vector3(snappedX, 0f, snappedZ);
         }
     }

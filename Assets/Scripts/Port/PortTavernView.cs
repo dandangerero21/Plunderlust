@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Plunderlust.Cargo;
 using Plunderlust.Core.Data;
 using Plunderlust.Crew;
+using Plunderlust.Quests;
 using UnityEngine;
 
 namespace Plunderlust.Port
@@ -38,6 +39,7 @@ namespace Plunderlust.Port
         private SmugglerCoveOutpost _activeSmugglerCove;
         private bool _isOpen = false;
         private bool _isSmugglerMode = false;
+        private bool _isBountyBoardOpen = false;
         private int _openedFrame = -1;
 
         // Crew Replacement Sub-Modal State
@@ -57,6 +59,7 @@ namespace Plunderlust.Port
         private GUIStyle _cardTitleStyle;
         private GUIStyle _bodyStyle;
         private GUIStyle _costStyle;
+        private GUIStyle _btnStyle;
         private Texture2D _bgTexture;
         private Texture2D _cardBgTexture;
         private bool _stylesInitialized = false;
@@ -99,7 +102,13 @@ namespace Plunderlust.Port
             _isOpen = true;
             _openedFrame = Time.frameCount;
             _isReplacing = false;
+            _isBountyBoardOpen = false;
             _pendingOfficer = null;
+
+            if (BountyQuestManager.Instance != null && BountyQuestManager.Instance.AvailableContracts.Count == 0)
+            {
+                BountyQuestManager.Instance.RefreshAvailableBounties(haven.transform.position);
+            }
         }
 
         public void OpenSmugglerCove(SmugglerCoveOutpost cove)
@@ -111,13 +120,20 @@ namespace Plunderlust.Port
             _isOpen = true;
             _openedFrame = Time.frameCount;
             _isReplacing = false;
+            _isBountyBoardOpen = false;
             _pendingOfficer = null;
+
+            if (BountyQuestManager.Instance != null && BountyQuestManager.Instance.AvailableContracts.Count == 0)
+            {
+                BountyQuestManager.Instance.RefreshAvailableBounties(cove.transform.position);
+            }
         }
 
         public void CloseView()
         {
             _isOpen = false;
             _isReplacing = false;
+            _isBountyBoardOpen = false;
             _pendingOfficer = null;
             _activePortHaven = null;
             _activeSmugglerCove = null;
@@ -131,7 +147,11 @@ namespace Plunderlust.Port
 
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.T))
             {
-                if (_isReplacing)
+                if (_isBountyBoardOpen)
+                {
+                    _isBountyBoardOpen = false;
+                }
+                else if (_isReplacing)
                 {
                     _isReplacing = false;
                     _pendingOfficer = null;
@@ -152,7 +172,7 @@ namespace Plunderlust.Port
 
             _windowTitleStyle = new GUIStyle
             {
-                fontSize = 22,
+                fontSize = 24,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
@@ -160,7 +180,7 @@ namespace Plunderlust.Port
 
             _subTitleStyle = new GUIStyle
             {
-                fontSize = 15,
+                fontSize = 17,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
@@ -168,7 +188,7 @@ namespace Plunderlust.Port
 
             _cardTitleStyle = new GUIStyle
             {
-                fontSize = 15,
+                fontSize = 17,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
@@ -176,7 +196,7 @@ namespace Plunderlust.Port
 
             _bodyStyle = new GUIStyle
             {
-                fontSize = 13,
+                fontSize = 14,
                 fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.MiddleLeft,
                 wordWrap = true
@@ -185,11 +205,19 @@ namespace Plunderlust.Port
 
             _costStyle = new GUIStyle
             {
-                fontSize = 14,
+                fontSize = 15,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleRight
             };
             _costStyle.normal.textColor = new Color(0.35f, 1f, 0.45f);
+
+            _btnStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 15,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = true
+            };
 
             _stylesInitialized = true;
         }
@@ -205,34 +233,49 @@ namespace Plunderlust.Port
         private void OnGUI()
         {
             if (!_isOpen) return;
+            if (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) return;
 
             GUI.depth = -100;
             InitStyles();
 
-            // Large, spacious dialog window
-            float dialogWidth = 860f;
-            float dialogHeight = 580f;
+            // Responsive large dialog window for mobile readability
+            float dialogWidth = Mathf.Min(Screen.width * 0.94f, 1020f);
+            float dialogHeight = Mathf.Min(Screen.height * 0.92f, 680f);
             float startX = (Screen.width - dialogWidth) * 0.5f;
             float startY = (Screen.height - dialogHeight) * 0.5f;
+
+            // 1. Overlay Bounty Noticeboard Modal (If active, draw and return early to prevent click bleed)
+            if (_isBountyBoardOpen)
+            {
+                DrawBountyBoardModal(startX, startY, dialogWidth, dialogHeight);
+                return;
+            }
+
+            // 2. Overlay Replacement Modal (If active, draw and return early)
+            if (_isReplacing)
+            {
+                DrawReplacementModal(startX, startY, dialogWidth, dialogHeight);
+                return;
+            }
 
             Rect dialogRect = new Rect(startX, startY, dialogWidth, dialogHeight);
             GUI.DrawTexture(dialogRect, _bgTexture);
 
-            // 1. Dialog Header & Close Button
+            // Dialog Header & Close Button
             string headerText = _isSmugglerMode
-                ? $"💀 {_activeSmugglerCove?.CoveName.ToUpper()} (BARTER COVE)"
-                : $"⚓ {_activePortHaven?.PortName.ToUpper()} (TAVERN RECRUITMENT)";
-            GUI.Label(new Rect(startX + 40f, startY + 14f, dialogWidth - 80f, 30f), headerText, _windowTitleStyle);
+                ? $"{_activeSmugglerCove?.CoveName.ToUpper()} (BARTER COVE)"
+                : $"{_activePortHaven?.PortName.ToUpper()} (TAVERN RECRUITMENT)";
+            GUI.Label(new Rect(startX + 40f, startY + 14f, dialogWidth - 80f, 32f), headerText, _windowTitleStyle);
 
-            if (GUI.Button(new Rect(startX + dialogWidth - 46f, startY + 12f, 34f, 30f), "X"))
+            if (GUI.Button(new Rect(startX + dialogWidth - 52f, startY + 12f, 40f, 36f), "X", _btnStyle))
             {
                 CloseView();
             }
 
-            // Treasury & Complete Cargo summary bar (Displays ALL commodities)
+            // Treasury & Complete Cargo summary bar
             int gold = _playerCargo != null ? _playerCargo.CurrentGold : 0;
             System.Text.StringBuilder invSb = new System.Text.StringBuilder();
-            invSb.Append($"Your Purse: ✦ {gold} Gold  |  Cargo Hold: ");
+            invSb.Append($"Your Purse: {gold} Gold  |  Cargo Hold: ");
             int nonZeroCommodities = 0;
             for (int i = 1; i <= 7; i++)
             {
@@ -240,33 +283,26 @@ namespace Plunderlust.Port
                 int count = _playerCargo != null ? _playerCargo.GetItemCount(type) : 0;
                 if (count > 0)
                 {
-                    string icon = type switch
-                    {
-                        CargoItemType.Timber => "🪵",
-                        CargoItemType.Canvas => "⛵",
-                        CargoItemType.Cannonballs => "💣",
-                        CargoItemType.Sugar => "🍬",
-                        CargoItemType.Rum => "🍾",
-                        CargoItemType.Spices => "🌿",
-                        CargoItemType.TreasureMap => "🗺️",
-                        _ => ""
-                    };
                     if (nonZeroCommodities > 0) invSb.Append(", ");
-                    invSb.Append($"{icon} {count} {type}");
+                    invSb.Append($"{count} {type}");
                     nonZeroCommodities++;
                 }
             }
             if (nonZeroCommodities == 0) invSb.Append("Empty (0 units)");
-            GUI.Label(new Rect(startX + 24f, startY + 46f, dialogWidth - 48f, 22f), invSb.ToString(), _bodyStyle);
+            GUI.Label(new Rect(startX + 24f, startY + 50f, dialogWidth - 48f, 26f), invSb.ToString(), _bodyStyle);
 
-            // 2. Deckhand Manpower Section
-            DrawDeckhandSection(startX + 24f, startY + 74f, dialogWidth - 48f);
+            // Deckhand Manpower Section
+            DrawDeckhandSection(startX + 24f, startY + 80f, dialogWidth - 48f);
 
-            // 3. Officer Specialist Roster Section
-            DrawOfficerRosterSection(startX + 24f, startY + 152f, dialogWidth - 48f);
+            // Officer Specialist Roster Section
+            DrawOfficerRosterSection(startX + 24f, startY + 168f, dialogWidth - 48f);
 
-            // 4. Commodity Trading Market Button
-            if (GUI.Button(new Rect(startX + 24f, startY + dialogHeight - 48f, 220f, 36f), "⚖️ Open Commodity Market"))
+            // Bottom Action Navigation Bar
+            float bottomY = startY + dialogHeight - 56f;
+            float btnH = 46f;
+
+            // Commodity Trading Market Button
+            if (GUI.Button(new Rect(startX + 24f, bottomY, 230f, btnH), "[Market] Open Trade", _btnStyle))
             {
                 PortCommodityMarket market = _isSmugglerMode
                     ? _activeSmugglerCove?.GetComponent<PortCommodityMarket>()
@@ -279,22 +315,31 @@ namespace Plunderlust.Port
                 }
             }
 
-            // 5. Weigh Anchor Close Button
-            if (GUI.Button(new Rect(startX + dialogWidth - 210f, startY + dialogHeight - 48f, 190f, 36f), "Weigh Anchor"))
+            // High Seas Bounty Noticeboard Button
+            string bountyBtnLabel = (BountyQuestManager.Instance != null && BountyQuestManager.Instance.ActiveBounty != null)
+                ? "Active Bounty (1/1)"
+                : "Bounty Noticeboard";
+
+            if (GUI.Button(new Rect(startX + 266f, bottomY, 240f, btnH), bountyBtnLabel, _btnStyle))
             {
-                CloseView();
+                _isBountyBoardOpen = true;
+                Vector3 pPos = _isSmugglerMode ? _activeSmugglerCove.transform.position : _activePortHaven.transform.position;
+                if (BountyQuestManager.Instance != null && BountyQuestManager.Instance.AvailableContracts.Count == 0)
+                {
+                    BountyQuestManager.Instance.RefreshAvailableBounties(pPos);
+                }
             }
 
-            // 5. Overlay Replacement Modal (If active)
-            if (_isReplacing)
+            // Weigh Anchor Close Button
+            if (GUI.Button(new Rect(startX + dialogWidth - 230f, bottomY, 206f, btnH), "Weigh Anchor", _btnStyle))
             {
-                DrawReplacementModal(startX, startY, dialogWidth, dialogHeight);
+                CloseView();
             }
         }
 
         private void DrawDeckhandSection(float x, float y, float width)
         {
-            GUI.DrawTexture(new Rect(x, y, width, 68f), _cardBgTexture);
+            GUI.DrawTexture(new Rect(x, y, width, 76f), _cardBgTexture);
 
             int currentCrew = _playerCrew != null ? _playerCrew.CurrentDeckhands : 1;
             int maxCrew = _playerCrew != null ? _playerCrew.MaxCrewCapacity : 2;
@@ -303,12 +348,12 @@ namespace Plunderlust.Port
             int maxOfficers = _playerCrew != null ? _playerCrew.MaxOfficerCapacity : 1;
 
             string crewStatus = $"Deckhands: {currentCrew} / {maxCrew} (Min: {minCrew}) | Officer Berths: {currentOfficers} / {maxOfficers}";
-            GUI.Label(new Rect(x + 16f, y + 10f, 440f, 22f), crewStatus, _subTitleStyle);
+            GUI.Label(new Rect(x + 16f, y + 10f, width - 320f, 24f), crewStatus, _subTitleStyle);
 
             string penaltyText = _playerCrew != null && _playerCrew.IsUndercrewed
                 ? "<color=red>UNDERCREWED: -65% Maneuver, Reload & Bilge Pumping!</color>"
                 : "<color=lime>Full Manpower: 100% Ship Handling Efficiency</color>";
-            GUI.Label(new Rect(x + 16f, y + 36f, 420f, 22f), penaltyText, _bodyStyle);
+            GUI.Label(new Rect(x + 16f, y + 38f, width - 320f, 26f), penaltyText, _bodyStyle);
 
             // Recruit / Replace Button
             bool isFull = currentCrew >= maxCrew;
@@ -320,7 +365,7 @@ namespace Plunderlust.Port
                 ? "Berths Full: Replace Crew"
                 : (_isSmugglerMode ? $"Hire Deckhand ({goldCost}g + {barterCount} {barterItem})" : $"Hire Deckhand ({goldCost}g)");
 
-            if (GUI.Button(new Rect(x + width - 280f, y + 14f, 268f, 40f), btnText))
+            if (GUI.Button(new Rect(x + width - 295f, y + 14f, 280f, 48f), btnText, _btnStyle))
             {
                 if (!isFull)
                 {
@@ -361,7 +406,7 @@ namespace Plunderlust.Port
 
         private void DrawOfficerRosterSection(float x, float y, float width)
         {
-            GUI.Label(new Rect(x, y, width, 22f), "Available Officer Specialists for Hire:", _subTitleStyle);
+            GUI.Label(new Rect(x, y, width, 24f), "Available Officer Specialists for Hire:", _subTitleStyle);
 
             IReadOnlyList<CrewSpecialistSO> roster = _isSmugglerMode
                 ? _activeSmugglerCove?.SmugglerRoster
@@ -369,8 +414,8 @@ namespace Plunderlust.Port
 
             if (roster == null || roster.Count == 0) return;
 
-            float cardY = y + 26f;
-            float cardHeight = 100f;
+            float cardY = y + 28f;
+            float cardHeight = 108f;
 
             for (int i = 0; i < roster.Count; i++)
             {
@@ -382,10 +427,10 @@ namespace Plunderlust.Port
 
                 // Specialist Title & Name
                 string officerHeader = $"{officer.OfficerName}  [{officer.Tier} {officer.Specialty}]";
-                GUI.Label(new Rect(x + 16f, cardY + 10f, 460f, 22f), officerHeader, _cardTitleStyle);
+                GUI.Label(new Rect(x + 16f, cardY + 10f, width - 290f, 24f), officerHeader, _cardTitleStyle);
 
                 // Passive Perk Description
-                GUI.Label(new Rect(x + 16f, cardY + 34f, width - 260f, 54f), officer.GetEffectSummary(), _bodyStyle);
+                GUI.Label(new Rect(x + 16f, cardY + 36f, width - 290f, 60f), officer.GetEffectSummary(), _bodyStyle);
 
                 // Cost & Hire / Replace Button
                 int goldCost = _isSmugglerMode ? officer.SmugglerGoldCost : officer.BaseGoldCost;
@@ -395,13 +440,13 @@ namespace Plunderlust.Port
                 string costLabel = _isSmugglerMode
                     ? $"Cost: {goldCost}g + {officer.BarterMaterialCount} {officer.BarterMaterialType}"
                     : $"Cost: {goldCost} Gold";
-                GUI.Label(new Rect(x + width - 260f, cardY + 12f, 246f, 22f), costLabel, _costStyle);
+                GUI.Label(new Rect(x + width - 275f, cardY + 10f, 260f, 24f), costLabel, _costStyle);
 
                 string hireBtnText = isAssigned
                     ? "Replace Officer"
                     : (noFreeBerths ? "Berths Full: Replace" : "Hire Specialist");
 
-                if (GUI.Button(new Rect(x + width - 190f, cardY + 44f, 180f, 42f), hireBtnText))
+                if (GUI.Button(new Rect(x + width - 210f, cardY + 44f, 195f, 50f), hireBtnText, _btnStyle))
                 {
                     if (!isAssigned && !noFreeBerths)
                     {
@@ -461,36 +506,36 @@ namespace Plunderlust.Port
 
         private void DrawReplacementModal(float startX, float startY, float dialogWidth, float dialogHeight)
         {
-            float modalW = dialogWidth - 80f;
-            float modalH = dialogHeight - 80f;
-            float modalX = startX + 40f;
-            float modalY = startY + 40f;
+            float modalW = dialogWidth - 60f;
+            float modalH = dialogHeight - 60f;
+            float modalX = startX + 30f;
+            float modalY = startY + 30f;
 
             Rect modalRect = new Rect(modalX, modalY, modalW, modalH);
             GUI.DrawTexture(modalRect, _cardBgTexture);
             GUI.Box(modalRect, GUIContent.none);
 
             string targetName = _pendingIsDeckhand ? "1 Fresh Deckhand" : $"{_pendingOfficer.OfficerName} ({_pendingOfficer.Specialty})";
-            GUI.Label(new Rect(modalX + 20f, modalY + 16f, modalW - 40f, 28f), "⚠️ SHIP CREW QUARTERS FULL - SELECT CREW TO REPLACE", _cardTitleStyle);
+            GUI.Label(new Rect(modalX + 20f, modalY + 16f, modalW - 40f, 28f), "[CREW QUARTERS FULL - SELECT CREW TO REPLACE]", _cardTitleStyle);
 
             string subPrompt = $"Choose a crew member to dismiss from your vessel and replace with {targetName}:";
-            GUI.Label(new Rect(modalX + 20f, modalY + 46f, modalW - 40f, 22f), subPrompt, _bodyStyle);
+            GUI.Label(new Rect(modalX + 20f, modalY + 48f, modalW - 40f, 24f), subPrompt, _bodyStyle);
 
-            float rowY = modalY + 76f;
+            float rowY = modalY + 82f;
 
             // Option 1: Dismiss Deckhand (if deckhands > 0)
             if (_playerCrew != null && _playerCrew.CurrentDeckhands > 0)
             {
-                Rect rowRect = new Rect(modalX + 20f, rowY, modalW - 40f, 48f);
+                Rect rowRect = new Rect(modalX + 20f, rowY, modalW - 40f, 54f);
                 GUI.DrawTexture(rowRect, _bgTexture);
 
-                GUI.Label(new Rect(modalX + 32f, rowY + 14f, 320f, 22f), $"Deckhand Berth ({_playerCrew.CurrentDeckhands} currently assigned)", _subTitleStyle);
+                GUI.Label(new Rect(modalX + 32f, rowY + 16f, modalW - 320f, 24f), $"Deckhand Berth ({_playerCrew.CurrentDeckhands} currently assigned)", _subTitleStyle);
 
-                if (GUI.Button(new Rect(modalX + modalW - 240f, rowY + 8f, 220f, 32f), "Dismiss Deckhand & Replace"))
+                if (GUI.Button(new Rect(modalX + modalW - 270f, rowY + 7f, 250f, 40f), "Dismiss Deckhand & Replace", _btnStyle))
                 {
                     ExecuteReplacement(true, OfficerSpecialtyType.Carpenter);
                 }
-                rowY += 56f;
+                rowY += 62f;
             }
 
             // Option 2+: Assigned Officers
@@ -502,22 +547,22 @@ namespace Plunderlust.Port
                     CrewSpecialistSO off = assigned[i];
                     if (off == null) continue;
 
-                    Rect rowRect = new Rect(modalX + 20f, rowY, modalW - 40f, 48f);
+                    Rect rowRect = new Rect(modalX + 20f, rowY, modalW - 40f, 54f);
                     GUI.DrawTexture(rowRect, _bgTexture);
 
                     string offDesc = $"{off.OfficerName}  [{off.Tier} {off.Specialty}]";
-                    GUI.Label(new Rect(modalX + 32f, rowY + 14f, 340f, 22f), offDesc, _cardTitleStyle);
+                    GUI.Label(new Rect(modalX + 32f, rowY + 16f, modalW - 320f, 24f), offDesc, _cardTitleStyle);
 
-                    if (GUI.Button(new Rect(modalX + modalW - 240f, rowY + 8f, 220f, 32f), $"Replace {off.Specialty}"))
+                    if (GUI.Button(new Rect(modalX + modalW - 270f, rowY + 7f, 250f, 40f), $"Replace {off.Specialty}", _btnStyle))
                     {
                         ExecuteReplacement(false, off.Specialty);
                     }
-                    rowY += 56f;
+                    rowY += 62f;
                 }
             }
 
             // Cancel button
-            if (GUI.Button(new Rect(modalX + (modalW - 200f) * 0.5f, modalY + modalH - 46f, 200f, 34f), "Cancel - Keep Crew"))
+            if (GUI.Button(new Rect(modalX + (modalW - 240f) * 0.5f, modalY + modalH - 52f, 240f, 42f), "Cancel - Keep Current Crew", _btnStyle))
             {
                 _isReplacing = false;
                 _pendingOfficer = null;
@@ -573,6 +618,113 @@ namespace Plunderlust.Port
             // 4. Close replacement modal
             _isReplacing = false;
             _pendingOfficer = null;
+        }
+
+        private void DrawBountyBoardModal(float parentX, float parentY, float parentW, float parentH)
+        {
+            // Dim background overlay
+            GUI.color = new Color(0.04f, 0.08f, 0.12f, 0.88f);
+            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), _cardBgTexture);
+            GUI.color = Color.white;
+
+            float modalW = parentW;
+            float modalH = parentH;
+            float modalX = parentX;
+            float modalY = parentY;
+
+            GUI.DrawTexture(new Rect(modalX, modalY, modalW, modalH), _bgTexture);
+
+            // Title & Subtitle
+            GUI.Label(new Rect(modalX, modalY + 14f, modalW, 28f), "[HIGH SEAS BOUNTY NOTICEBOARD]", _windowTitleStyle);
+            GUI.Label(new Rect(modalX, modalY + 44f, modalW, 22f), "Guaranteed target vessel coordinates. Only 1 active contract can be held at a time.", _subTitleStyle);
+
+            float contentY = modalY + 72f;
+
+            // Active Bounty Banner Box
+            BountyContract active = BountyQuestManager.Instance != null ? BountyQuestManager.Instance.ActiveBounty : null;
+            if (active != null)
+            {
+                Rect activeRect = new Rect(modalX + 24f, contentY, modalW - 48f, 48f);
+                GUI.color = new Color(1f, 0.85f, 0.3f, 0.25f);
+                GUI.DrawTexture(activeRect, _cardBgTexture);
+                GUI.color = Color.white;
+
+                string activeDesc = $"CURRENT HUNT: {active.CaptainName} [{active.ShipName} - {active.TargetTier}] in {active.SectorDescription} | REWARD: {active.GoldReward} Gold";
+                GUI.Label(new Rect(activeRect.x + 12f, activeRect.y + 12f, activeRect.width - 180f, 26f), activeDesc, _bodyStyle);
+
+                if (GUI.Button(new Rect(activeRect.xMax - 160f, activeRect.y + 6f, 150f, 36f), "Abandon Hunt", _btnStyle))
+                {
+                    BountyQuestManager.Instance.AbandonBounty();
+                }
+
+                contentY += 56f;
+            }
+
+            // Available Bounties (3 Columns)
+            var contracts = BountyQuestManager.Instance != null ? BountyQuestManager.Instance.AvailableContracts : null;
+            if (contracts != null && contracts.Count > 0)
+            {
+                float colW = (modalW - 48f - 24f) / 3f;
+                float cardH = modalH - (contentY - modalY) - 64f;
+
+                for (int i = 0; i < contracts.Count && i < 3; i++)
+                {
+                    BountyContract c = contracts[i];
+                    float colX = modalX + 24f + (i * (colW + 12f));
+
+                    Rect cardRect = new Rect(colX, contentY, colW, cardH);
+                    GUI.DrawTexture(cardRect, _cardBgTexture);
+
+                    // Difficulty Tag
+                    string badge = c.IsHardContract
+                        ? "<color=#FFD700><b>[HARD BOUNTY (+1 TIER)]</b></color>"
+                        : "<color=#87CEEB><b>[STANDARD BOUNTY]</b></color>";
+                    GUI.Label(new Rect(colX + 12f, contentY + 12f, colW - 24f, 22f), badge, _bodyStyle);
+
+                    // Captain Name
+                    GUI.Label(new Rect(colX + 12f, contentY + 38f, colW - 24f, 24f), c.CaptainName, _cardTitleStyle);
+
+                    // Ship & Sector
+                    string details = $"Vessel: {c.ShipName}\nClass: {c.TargetTier}\nAllegiance: {c.Faction}\nSector: {c.SectorDescription}";
+                    GUI.Label(new Rect(colX + 12f, contentY + 66f, colW - 24f, 85f), details, _bodyStyle);
+
+                    // Gold Reward
+                    GUI.Label(new Rect(colX + 12f, contentY + cardH - 100f, colW - 24f, 26f), $"<color=#FFD700><b>BOUNTY: {c.GoldReward} GOLD</b></color>", _cardTitleStyle);
+
+                    // Action Button: Interactive and responsive
+                    bool isThisActive = active != null && active.BountyId == c.BountyId;
+                    bool hasOtherActive = active != null && !isThisActive;
+
+                    if (isThisActive)
+                    {
+                        GUI.enabled = false;
+                        GUI.Button(new Rect(colX + 10f, contentY + cardH - 56f, colW - 20f, 46f), "[Active Target]", _btnStyle);
+                        GUI.enabled = true;
+                    }
+                    else if (hasOtherActive)
+                    {
+                        // Player can swap active contracts directly!
+                        if (GUI.Button(new Rect(colX + 10f, contentY + cardH - 56f, colW - 20f, 46f), "Swap To This Hunt", _btnStyle))
+                        {
+                            BountyQuestManager.Instance.AbandonBounty();
+                            BountyQuestManager.Instance.AcceptBounty(c);
+                        }
+                    }
+                    else
+                    {
+                        if (GUI.Button(new Rect(colX + 10f, contentY + cardH - 56f, colW - 20f, 46f), "Accept Bounty", _btnStyle))
+                        {
+                            BountyQuestManager.Instance.AcceptBounty(c);
+                        }
+                    }
+                }
+            }
+
+            // Return to Tavern Button
+            if (GUI.Button(new Rect(modalX + (modalW - 280f) * 0.5f, modalY + modalH - 52f, 280f, 42f), "<< Back to Port Tavern", _btnStyle))
+            {
+                _isBountyBoardOpen = false;
+            }
         }
     }
 }

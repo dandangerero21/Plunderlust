@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Plunderlust.Core.Data;
 using Plunderlust.Port;
+using Plunderlust.Quests;
 using Plunderlust.Ship;
 using Plunderlust.World;
 using UnityEngine;
@@ -324,7 +325,7 @@ namespace Plunderlust.UI
                 var marker = _activeMarkers[i];
                 if (marker.LabelRt != null)
                 {
-                    marker.LabelRt.anchoredPosition = new Vector2(0f, 18f) + marker.RepulsedOffset;
+                    marker.LabelRt.anchoredPosition = new Vector2(0f, 26f) + marker.RepulsedOffset;
                 }
             }
         }
@@ -353,7 +354,7 @@ namespace Plunderlust.UI
 
                 string cleanName = CanonicalizePortName(haven.PortName, haven.RulingFaction);
                 Color flagCol = (haven.RulingFaction == FactionType.CorsairBrethren) ? NauticalUITheme.CrimsonBlood : NauticalUITheme.BrassBorder;
-                CreateChartMarker(haven.transform, cleanName, flagCol, "⚓");
+                CreateChartMarker(haven.transform, cleanName, flagCol, "P");
             }
 
             // 2. Discover SmugglerCoveOutpost objects
@@ -365,7 +366,7 @@ namespace Plunderlust.UI
                 if (IsPositionAlreadyRegistered(wPos, 35f)) continue;
 
                 string cleanName = string.IsNullOrEmpty(cove.CoveName) ? "Dead Man's Reef (Smugglers)" : cove.CoveName;
-                CreateChartMarker(cove.transform, cleanName, NauticalUITheme.GoldAccent, "☠");
+                CreateChartMarker(cove.transform, cleanName, NauticalUITheme.GoldAccent, "S");
             }
 
             // 3. Discover Treasure Atolls
@@ -376,14 +377,27 @@ namespace Plunderlust.UI
                 Vector3 wPos = atoll.transform.position;
                 if (IsPositionAlreadyRegistered(wPos, 35f)) continue;
 
-                CreateChartMarker(atoll.transform, "Treasure Atoll", NauticalUITheme.EmeraldSea, "✖");
+                CreateChartMarker(atoll.transform, "Treasure Atoll", NauticalUITheme.EmeraldSea, "X");
             }
 
             // 4. Fallback: If Tortuga Corsair Haven exists by name
             GameObject tortugaGo = GameObject.Find("Tortuga_CorsairHaven");
             if (tortugaGo != null && !IsPositionAlreadyRegistered(tortugaGo.transform.position, 35f))
             {
-                CreateChartMarker(tortugaGo.transform, "Tortuga (Corsair Haven)", NauticalUITheme.CrimsonBlood, "⚓");
+                CreateChartMarker(tortugaGo.transform, "Tortuga (Corsair Haven)", NauticalUITheme.CrimsonBlood, "P");
+            }
+
+            // 5. Discover Active Bounty Target (if held)
+            if (BountyQuestManager.Instance != null && BountyQuestManager.Instance.ActiveBounty != null)
+            {
+                var bounty = BountyQuestManager.Instance.ActiveBounty;
+                BountyTargetMarker marker = Object.FindAnyObjectByType<BountyTargetMarker>();
+                Transform targetTrans = (marker != null) ? marker.transform : null;
+                Vector3 targetPos = (targetTrans != null) ? targetTrans.position : bounty.TargetSpawnLocation;
+
+                string bountyLabel = $"BOUNTY: {bounty.CaptainName} ({bounty.TargetTier})";
+                Color bountyCol = bounty.IsHardContract ? NauticalUITheme.CrimsonBlood : NauticalUITheme.GoldAccent;
+                CreateChartMarker(targetTrans, bountyLabel, bountyCol, "!", targetPos);
             }
         }
 
@@ -413,18 +427,19 @@ namespace Plunderlust.UI
             return raw.Replace("_", " ");
         }
 
-        private void CreateChartMarker(Transform worldTransform, string label, Color markerColor, string iconSymbol)
+        private void CreateChartMarker(Transform worldTransform, string label, Color markerColor, string iconSymbol, Vector3? overridePos = null)
         {
-            if (_chartContentRect == null || worldTransform == null) return;
+            if (_chartContentRect == null) return;
+            if (worldTransform == null && !overridePos.HasValue) return;
 
-            Vector3 wPos = worldTransform.position;
+            Vector3 wPos = overridePos.HasValue ? overridePos.Value : worldTransform.position;
             Vector2 chartPos = new Vector2(wPos.x * _worldToChartScale, wPos.z * _worldToChartScale);
 
             GameObject markerRoot = new GameObject($"Marker_{label}");
             markerRoot.transform.SetParent(_chartContentRect, false);
             RectTransform rootRt = markerRoot.AddComponent<RectTransform>();
             rootRt.anchoredPosition = chartPos;
-            rootRt.sizeDelta = new Vector2(32f, 32f);
+            rootRt.sizeDelta = new Vector2(52f, 52f);
 
             // Icon Blip Image / Stamped Symbol
             GameObject iconGo = new GameObject("Icon");
@@ -436,7 +451,7 @@ namespace Plunderlust.UI
             Text iconText = iconGo.AddComponent<Text>();
             iconText.text = iconSymbol;
             iconText.font = NauticalUITheme.GetDefaultFont();
-            iconText.fontSize = 20;
+            iconText.fontSize = 32;
             iconText.fontStyle = FontStyle.Bold;
             iconText.alignment = TextAnchor.MiddleCenter;
             iconText.color = markerColor;
@@ -448,13 +463,29 @@ namespace Plunderlust.UI
             badgeRt.anchorMin = new Vector2(0.5f, 0.5f);
             badgeRt.anchorMax = new Vector2(0.5f, 0.5f);
             badgeRt.pivot = new Vector2(0.5f, 0f);
-            badgeRt.anchoredPosition = new Vector2(0f, 20f);
-            badgeRt.sizeDelta = new Vector2(185f, 26f);
+            badgeRt.anchoredPosition = new Vector2(0f, 32f);
+            badgeRt.sizeDelta = new Vector2(260f, 38f);
 
             Image badgeImg = badgeGo.AddComponent<Image>();
             badgeImg.sprite = NauticalUITheme.ParchmentPanel;
             badgeImg.type = Image.Type.Sliced;
             badgeImg.color = Color.white;
+
+            // Interactive Click/Tap to Set Horizon Waypoint Beacon
+            Vector3 targetWpPos = wPos;
+            string targetWpLabel = label;
+            Button badgeBtn = badgeGo.AddComponent<Button>();
+            badgeBtn.onClick.AddListener(() =>
+            {
+                if (WaypointBeacon.Instance != null)
+                {
+                    WaypointBeacon.Instance.SetWaypoint(targetWpPos, targetWpLabel);
+                }
+                if (PirateCombatHUD.Instance != null)
+                {
+                    PirateCombatHUD.Instance.ShowBanner($"WAYPOINT SET: {targetWpLabel}", NauticalUITheme.GoldAccent, 2.5f);
+                }
+            });
 
             // Marker Text Label (Child of Badge, rendered ON TOP of parchment)
             GameObject labelGo = new GameObject("LabelText");
@@ -467,7 +498,7 @@ namespace Plunderlust.UI
             Text labelText = labelGo.AddComponent<Text>();
             labelText.text = label;
             labelText.font = NauticalUITheme.GetDefaultFont();
-            labelText.fontSize = 11;
+            labelText.fontSize = 15;
             labelText.fontStyle = FontStyle.Bold;
             labelText.alignment = TextAnchor.MiddleCenter;
             labelText.color = NauticalUITheme.InkBlack;
@@ -482,7 +513,7 @@ namespace Plunderlust.UI
                 LabelRt = badgeRt,
                 OriginalLocalPos = chartPos,
                 RepulsedOffset = Vector2.zero,
-                Size = new Vector2(185f, 28f),
+                Size = new Vector2(230f, 34f),
                 WorldTarget = worldTransform,
                 StaticWorldPos = wPos
             };
@@ -496,7 +527,7 @@ namespace Plunderlust.UI
             GameObject canvasGo = new GameObject("Plunderlust_SeaChartCanvas");
             _canvas = canvasGo.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 90; // Top modal layer
+            _canvas.sortingOrder = 800; // ponytail: Top modal layer above HUD (50-55), inventory (85), and tutorial (650)
 
             CanvasScaler scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -593,7 +624,7 @@ namespace Plunderlust.UI
             xRt.anchorMax = Vector2.one;
             xRt.sizeDelta = Vector2.zero;
             Text xText = xGo.AddComponent<Text>();
-            xText.text = "✕";
+            xText.text = "X";
             xText.font = NauticalUITheme.GetDefaultFont();
             xText.fontSize = 24;
             xText.fontStyle = FontStyle.Bold;
@@ -655,7 +686,7 @@ namespace Plunderlust.UI
             GameObject playerGo = new GameObject("PlayerShipNeedle");
             playerGo.transform.SetParent(contentGo.transform, false);
             _playerNeedleRect = playerGo.AddComponent<RectTransform>();
-            _playerNeedleRect.sizeDelta = new Vector2(26f, 38f);
+            _playerNeedleRect.sizeDelta = new Vector2(36f, 52f);
             Image playerImg = playerGo.AddComponent<Image>();
             playerImg.sprite = NauticalUITheme.ShipHullSilhouette;
             playerImg.color = NauticalUITheme.EmeraldSea;

@@ -708,7 +708,7 @@ namespace Plunderlust.UI
             _inputChristenedName.characterLimit = 24;
 
             // Randomize Dice Button
-            _btnRandomizeName = CreateMenuButton(innerGo.transform, new Vector2(0f, -45f), "🎲 RANDOMIZE NAME", HandleRandomizeNameClicked, 280f, 44f);
+            _btnRandomizeName = CreateMenuButton(innerGo.transform, new Vector2(0f, -45f), "RANDOMIZE NAME", HandleRandomizeNameClicked, 280f, 44f);
 
             // Confirm & Cancel
             _btnConfirmSetSail = CreateMenuButton(innerGo.transform, new Vector2(-120f, -125f), "SET SAIL!", HandleConfirmSetSailClicked, 210f, 50f);
@@ -821,10 +821,10 @@ namespace Plunderlust.UI
             hintTxt.fontSize = 15;
             hintTxt.alignment = TextAnchor.MiddleCenter;
             hintTxt.color = new Color(0.96f, 0.85f, 0.45f);
-            hintTxt.text = "✦ DRAG TO ROTATE 360° ✦";
+            hintTxt.text = "DRAG TO ROTATE 360 DEGREES";
 
             // Back to Main Menu Button anchored cleanly to Top-Left corner
-            _btnExitShowcase = CreateMenuButton(_showcasePanel.transform, Vector2.zero, "◀ MAIN MENU", () => SetMenuState(MainMenuState.TitleScreen), 220f, 48f);
+            _btnExitShowcase = CreateMenuButton(_showcasePanel.transform, Vector2.zero, "< MAIN MENU", () => SetMenuState(MainMenuState.TitleScreen), 220f, 48f);
             RectTransform exitRt = _btnExitShowcase.GetComponent<RectTransform>();
             exitRt.anchorMin = new Vector2(0f, 1f);
             exitRt.anchorMax = new Vector2(0f, 1f);

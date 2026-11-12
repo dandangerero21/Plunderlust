@@ -17,13 +17,15 @@ namespace Plunderlust.World
 
         [Header("Archipelago World Bounds")]
         [Tooltip("Half-extent of the playable map in meters (covers -halfSize to +halfSize).")]
-        [SerializeField] private float _halfSize = 550.0f;
+        [SerializeField] private float _halfSize = 650.0f;
         [Tooltip("Distance from boundary edge where warning alerts and inward currents activate.")]
-        [SerializeField] private float _currentZoneWidth = 45.0f;
+        [SerializeField] private float _currentZoneWidth = 55.0f;
         [Tooltip("Acceleration power of inward ocean currents pushing stray ships back into the map.")]
         [SerializeField] private float _restorativeCurrentPower = 18.0f;
         [Tooltip("Spacing in meters between decorative barrier reef rocks along the perimeter.")]
         [SerializeField] private float _barrierReefSpacing = 48.0f;
+        [Tooltip("If true, spawns decorative barrier reef rocks along boundary. False for endless open ocean.")]
+        [SerializeField] private bool _showPerimeterVisuals = false;
 
         private readonly List<Rigidbody> _trackedShips = new List<Rigidbody>();
         private Transform _playerTransform;
@@ -41,7 +43,11 @@ namespace Plunderlust.World
             Instance = this;
 
             BuildPerimeterColliders();
-            SpawnPerimeterReefVisuals();
+            // ponytail: invisible boundaries by default so the ocean stretches uninterrupted
+            if (_showPerimeterVisuals)
+            {
+                SpawnPerimeterReefVisuals();
+            }
         }
 
         private void Start()
@@ -244,7 +250,7 @@ namespace Plunderlust.World
                                 _lastPlayerAlertTime = Time.time;
                                 if (PirateCombatHUD.Instance != null)
                                 {
-                                    PirateCombatHUD.Instance.ShowBanner("⚠️ PERILOUS REEFS: Outer boundary reached! Ocean currents turning ship about.", new Color(1f, 0.45f, 0.25f), 3.0f);
+                                    PirateCombatHUD.Instance.ShowBanner("OPEN OCEAN: Strong currents are turning your vessel about.", new Color(0.35f, 0.75f, 0.95f), 3.0f);
                                 }
                             }
                         }

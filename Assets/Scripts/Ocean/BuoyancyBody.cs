@@ -188,9 +188,10 @@ namespace Plunderlust.Ocean
                     _cachedProbeVelocity = _rb.GetPointVelocity(_cachedProbePos);
                     float dragFactor = _probeWaterDrag * submersionRatio;
 
-                    _cachedTotalForce.x = -_cachedProbeVelocity.x * dragFactor;
+                    // ponytail: probe drag dampens vertical wave bobbing; horizontal drag is handled by linearDamping
+                    _cachedTotalForce.x = -_cachedProbeVelocity.x * (dragFactor * 0.05f);
                     _cachedTotalForce.y = upwardForce - (_cachedProbeVelocity.y * dragFactor * 0.5f);
-                    _cachedTotalForce.z = -_cachedProbeVelocity.z * dragFactor;
+                    _cachedTotalForce.z = -_cachedProbeVelocity.z * (dragFactor * 0.05f);
 
                     _rb.AddForceAtPosition(_cachedTotalForce, _cachedProbePos, ForceMode.Force);
                 }

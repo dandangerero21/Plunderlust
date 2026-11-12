@@ -199,7 +199,7 @@ namespace Plunderlust.Port
             {
                 _mooringBtnStyle = new GUIStyle(GUI.skin.button);
                 _mooringBtnStyle.font = UI.NauticalUITheme.GetDefaultFont();
-                _mooringBtnStyle.fontSize = 15;
+                _mooringBtnStyle.fontSize = 18;
                 _mooringBtnStyle.fontStyle = FontStyle.Bold;
                 _mooringBtnStyle.normal.textColor = new Color(1.0f, 0.90f, 0.40f);
                 _mooringBtnStyle.alignment = TextAnchor.MiddleCenter;
@@ -211,16 +211,18 @@ namespace Plunderlust.Port
         {
             if (!_isPlayerMoored) return;
             if (PortTavernView.Instance != null && PortTavernView.Instance.IsOpen) return;
+            if (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) return;
+            if (UI.ShipInventoryModalUI.Instance != null && UI.ShipInventoryModalUI.Instance.IsOpen) return;
 
             GUIStyle btnStyle = GetMooringBtnStyle();
 
             // 1. Fixed, prominent screen-space Moor button at bottom
-            float btnWidth = 340f;
-            float btnHeight = 40f;
+            float btnWidth = Mathf.Clamp(Screen.width * 0.45f, 360f, 520f);
+            float btnHeight = 56f;
             float btnX = (Screen.width - btnWidth) * 0.5f;
-            float btnY = Screen.height - 86f;
+            float btnY = Screen.height - 96f;
 
-            if (GUI.Button(new Rect(btnX, btnY, btnWidth, btnHeight), $"⚓ MOOR AT {_portName.ToUpper()}", btnStyle))
+            if (GUI.Button(new Rect(btnX, btnY, btnWidth, btnHeight), $"MOOR AT {_portName.ToUpper()}", btnStyle))
             {
                 ToggleTavern();
             }
@@ -235,11 +237,11 @@ namespace Plunderlust.Port
             if (screenPos.z < 0.2f) return;
 
             float screenY = Screen.height - screenPos.y;
-            float badgeWidth = 320f;
-            float badgeHeight = 32f;
+            float badgeWidth = 340f;
+            float badgeHeight = 44f;
             float startX = screenPos.x - (badgeWidth * 0.5f);
 
-            if (GUI.Button(new Rect(startX, screenY, badgeWidth, badgeHeight), $"⚓ MOOR SHIP", btnStyle))
+            if (GUI.Button(new Rect(startX, screenY, badgeWidth, badgeHeight), "MOOR SHIP", btnStyle))
             {
                 ToggleTavern();
             }

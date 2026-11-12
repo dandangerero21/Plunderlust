@@ -465,7 +465,10 @@ namespace Plunderlust.AI
 
             // Apply forward obstacle and vessel avoidance
             desiredHeading = ApplyObstacleAvoidance(desiredHeading, out float speedScale);
-            _locomotion.ThrottleInput = Mathf.Max(0.35f, _locomotion.ThrottleInput * speedScale);
+            bool isRowboat = _locomotion != null && ((_locomotion.HullData != null && _locomotion.HullData.SupportsRowing && !_locomotion.HullData.SupportsSails) || _locomotion.CurrentSailState == SailState.Rowing);
+            // ponytail: NPC rowboat is 88% of player speed, noticeably a bit slower so player outpaces them
+            float targetThrottle = isRowboat ? (_locomotion.ThrottleInput * 0.88f) : _locomotion.ThrottleInput;
+            _locomotion.ThrottleInput = Mathf.Max(0.35f, targetThrottle * speedScale);
 
             // 4. Steer rudder towards desired heading
             Vector3 localHeading = transform.InverseTransformDirection(desiredHeading);
@@ -473,7 +476,13 @@ namespace Plunderlust.AI
             float steerInput = Mathf.Clamp(headingAngle / 28.0f, -1.0f, 1.0f);
             _locomotion.SteerInput = steerInput;
 
-            // 5. Broadside Firing Evaluation
+            // 5. Firing Evaluation
+            // ponytail: Rowboats with bow swivel guns fire directly when facing target!
+            if (_combat.CanFireForward && Vector3.Angle(transform.forward, flatDir) <= 45.0f && currentDist <= 32.0f)
+            {
+                _combat.FireForwardSwivel();
+            }
+
             Vector3 firingFlank = useStarboard ? transform.right : -transform.right;
             float alignmentAngle = Vector3.Angle(firingFlank, flatDir);
 
@@ -513,7 +522,10 @@ namespace Plunderlust.AI
 
             // Apply forward obstacle and vessel avoidance
             desiredHeading = ApplyObstacleAvoidance(desiredHeading, out float speedScale);
-            _locomotion.ThrottleInput = Mathf.Max(0.4f, 1.0f * speedScale);
+            bool isRowboat = _locomotion != null && ((_locomotion.HullData != null && _locomotion.HullData.SupportsRowing && !_locomotion.HullData.SupportsSails) || _locomotion.CurrentSailState == SailState.Rowing);
+            // ponytail: NPC rowboat cruises at 88% throttle, a bit slower than player
+            float cruiseThrottle = isRowboat ? 0.88f : 1.0f;
+            _locomotion.ThrottleInput = Mathf.Max(0.35f, cruiseThrottle * speedScale);
 
             Vector3 localTarget = transform.InverseTransformDirection(desiredHeading);
             float targetAngle = Mathf.Atan2(localTarget.x, localTarget.z) * Mathf.Rad2Deg;
@@ -685,10 +697,11 @@ namespace Plunderlust.AI
 
             float screenY = Screen.height - screenPos.y;
             float width = 360f;
-            float height = 36f;
+            float height = 46f;
             float startX = screenPos.x - (width * 0.5f);
 
-            if (GUI.Button(new Rect(startX, screenY, width, height), "🏳️ TAP TO BOARD & PLUNDER VESSEL"))
+            GUIStyle btnStyle = Port.PortIslandHaven.GetMooringBtnStyle();
+            if (GUI.Button(new Rect(startX, screenY, width, height), "TAP TO BOARD & PLUNDER VESSEL", btnStyle))
             {
                 GameObject playerGo = GameObject.FindGameObjectWithTag("Player");
                 if (playerGo != null && Vector3.Distance(transform.position, playerGo.transform.position) <= 22.0f)

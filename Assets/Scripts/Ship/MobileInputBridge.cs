@@ -195,7 +195,23 @@ namespace Plunderlust.Ship
                 UpdateWeaponTriggerLayout();
             }
 
-            if (PauseMenuUI.IsPaused || GameOverUI.IsGameOver)
+            // ponytail: Hide mobile steering wheel and combat triggers when Sea Chart or Inventory is open
+            if (_safeAreaRect != null)
+            {
+                bool isModalOpen = (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) ||
+                                   (UI.ShipInventoryModalUI.Instance != null && UI.ShipInventoryModalUI.Instance.IsOpen);
+                bool shouldShowControls = !PauseMenuUI.IsPaused && !GameOverUI.IsGameOver && !isModalOpen;
+                if (_safeAreaRect.gameObject.activeSelf != shouldShowControls)
+                {
+                    _safeAreaRect.gameObject.SetActive(shouldShowControls);
+                }
+            }
+
+            bool isInputBlocked = PauseMenuUI.IsPaused || GameOverUI.IsGameOver ||
+                                  (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) ||
+                                  (UI.ShipInventoryModalUI.Instance != null && UI.ShipInventoryModalUI.Instance.IsOpen);
+
+            if (isInputBlocked)
             {
                 SteerOutput = 0f;
                 ThrottleOutput = 0f;
@@ -999,7 +1015,7 @@ namespace Plunderlust.Ship
             bTxtRt.anchorMax = Vector2.one;
             bTxtRt.sizeDelta = Vector2.zero;
             Text bt = bTxtGo.AddComponent<Text>();
-            bt.text = "🏳️ BOARD & PLUNDER!";
+            bt.text = "BOARD & PLUNDER!";
             bt.font = NauticalUITheme.GetDefaultFont();
             bt.fontSize = 15;
             bt.fontStyle = FontStyle.Bold;

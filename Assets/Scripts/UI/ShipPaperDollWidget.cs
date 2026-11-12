@@ -123,6 +123,7 @@ namespace Plunderlust.UI
         private void OnGUI()
         {
             if (!_showOnGUI) return;
+            if (SeaChartMapUI.Instance != null && SeaChartMapUI.Instance.IsOpen) return;
             InitStyles();
 
             if (_subsystems == null || _subsystems.gameObject == null)
@@ -191,7 +192,7 @@ namespace Plunderlust.UI
 
                 // [H] Patch Hull Button
                 bool canHull = _repairs.CanRepairHull(out string hullMsg);
-                string hullBtnText = _repairs.IsRepairingHull ? "Patching Hull..." : (canHull ? "🪵 [H] Patch Hull" : $"🪵 {hullMsg}");
+                string hullBtnText = _repairs.IsRepairingHull ? "Patching Hull..." : (canHull ? "[H] Patch Hull" : $"{hullMsg}");
                 GUI.color = canHull ? new Color(0.7f, 1f, 0.7f) : (_repairs.IsRepairingHull ? Color.yellow : new Color(0.6f, 0.6f, 0.6f));
                 if (GUI.Button(new Rect(posX + 10f, posY + 168f, btnW, 22f), hullBtnText, _btnStyle))
                 {
@@ -200,7 +201,7 @@ namespace Plunderlust.UI
 
                 // [J] Mend Sails Button
                 bool canSails = _repairs.CanRepairSails(out string sailsMsg);
-                string sailsBtnText = _repairs.IsRepairingSails ? "Mending Sails..." : (canSails ? "⛵ [J] Mend Sails" : $"⛵ {sailsMsg}");
+                string sailsBtnText = _repairs.IsRepairingSails ? "Mending Sails..." : (canSails ? "[J] Mend Sails" : $"{sailsMsg}");
                 GUI.color = canSails ? new Color(0.7f, 1f, 1f) : (_repairs.IsRepairingSails ? Color.cyan : new Color(0.6f, 0.6f, 0.6f));
                 if (GUI.Button(new Rect(posX + 16f + btnW, posY + 168f, btnW, 22f), sailsBtnText, _btnStyle))
                 {

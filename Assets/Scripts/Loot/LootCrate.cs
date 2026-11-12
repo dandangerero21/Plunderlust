@@ -272,7 +272,7 @@ namespace Plunderlust.Loot
             float startX = screenPos.x - (width * 0.5f);
 
             GUI.DrawTexture(new Rect(startX - 2f, screenY - 1f, width + 4f, height + 2f), _markerBgTex);
-            GUI.Label(new Rect(startX, screenY, width, height), $"✦ {_itemType} +{_quantity}", _markerStyle);
+            GUI.Label(new Rect(startX, screenY, width, height), $"{_itemType} +{_quantity}", _markerStyle);
         }
     }
 }

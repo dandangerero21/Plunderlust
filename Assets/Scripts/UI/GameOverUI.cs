@@ -322,7 +322,7 @@ namespace Plunderlust.UI
             // 1. Root Canvas
             _canvas = gameObject.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 700; // Above PauseMenu (600) and general HUD (50-90)
+            _canvas.sortingOrder = 900; // ponytail: Top-level game over layer above all modals and map
 
             _scaler = gameObject.AddComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

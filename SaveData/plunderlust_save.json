@@ -1,24 +1,59 @@
 {
-    "shipInstanceId": "9f2c8ddf-62c1-4584-8cfe-95a9156f86da",
-    "shipCustomName": "Tide Skimmer",
-    "tier": 1,
-    "posX": 17.49184226989746,
-    "posY": 0.8635815978050232,
-    "posZ": 82.64593505859375,
-    "rotY": 96.88510131835938,
-    "hullHealth": 150.0,
-    "sailsHealth": 80.0,
-    "rudderHealth": 100.0,
-    "gunDeckHealth": 0.0,
+    "shipInstanceId": "4adfdda5-fbd6-411d-940a-8bb1deebd689",
+    "shipCustomName": "The Barnacle",
+    "tier": 2,
+    "posX": -160.13211059570313,
+    "posY": -0.21845373511314393,
+    "posZ": -36.482093811035159,
+    "rotY": 16.299068450927736,
+    "hullHealth": 450.0,
+    "sailsHealth": 280.0,
+    "rudderHealth": 240.0,
+    "gunDeckHealth": 245.0,
     "currentBilgeWater": 0.0,
-    "currentDeckhands": 2,
-    "assignedOfficers": [],
-    "currentGold": 100,
-    "cargoInventory": [],
-    "imperialNavyReputation": 100,
-    "merchantGuildReputation": 89,
+    "currentDeckhands": 4,
+    "assignedOfficers": [
+        {
+            "officerId": "",
+            "officerName": "Silas 'Ironwood' Thorne",
+            "specialty": 0,
+            "tier": 1,
+            "passiveValue": 6.5
+        },
+        {
+            "officerId": "",
+            "officerName": "Grizzled 'Bilge-Rat' Ben",
+            "specialty": 1,
+            "tier": 2,
+            "passiveValue": 32.0
+        },
+        {
+            "officerId": "",
+            "officerName": "Captain Bartholomew Flint",
+            "specialty": 2,
+            "tier": 1,
+            "passiveValue": 0.2199999988079071
+        }
+    ],
+    "currentGold": 270,
+    "cargoInventory": [
+        {
+            "itemType": 5,
+            "quantity": 5
+        },
+        {
+            "itemType": 6,
+            "quantity": 4
+        },
+        {
+            "itemType": 8,
+            "quantity": 4
+        }
+    ],
+    "imperialNavyReputation": 31,
+    "merchantGuildReputation": 98,
     "corsairBrethrenReputation": -100,
     "freeportTradersReputation": 15,
-    "activeBounty": 0,
+    "activeBounty": 990,
     "discoveredIslandsCount": 0
 }

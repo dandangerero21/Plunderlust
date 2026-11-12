@@ -154,7 +154,7 @@ namespace Plunderlust.World
 
             if (PirateCombatHUD.Instance != null)
             {
-                PirateCombatHUD.Instance.ShowBanner($"🏴‍☠️ BURIED TREASURE UNCOVERED: +{goldYield} GOLD!", new Color(1f, 0.85f, 0.2f), 4.5f);
+                PirateCombatHUD.Instance.ShowBanner($"BURIED TREASURE UNCOVERED: +{goldYield} GOLD!", new Color(1f, 0.85f, 0.2f), 4.5f);
             }
 
             OnTreasureDiscovered?.Invoke(cacheObject.transform.position, goldYield);

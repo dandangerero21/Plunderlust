@@ -173,7 +173,7 @@ namespace Plunderlust.World
             shallowCol.size = new Vector3(18.0f, 4.0f, 11.0f);
             shallowCol.isTrigger = true;
 
-            var relay = triggerGo.AddComponent<TriggerRelay>();
+            var relay = triggerGo.AddComponent<CoastalTriggerRelay>();
             relay.TargetBarrier = barrier;
 
             return barrier;
@@ -218,23 +218,10 @@ namespace Plunderlust.World
             shallowCol.size = new Vector3(17.0f, 4.0f, 17.0f);
             shallowCol.isTrigger = true;
 
-            var relay = triggerGo.AddComponent<TriggerRelay>();
+            var relay = triggerGo.AddComponent<CoastalTriggerRelay>();
             relay.TargetBarrier = barrier;
 
             return barrier;
-        }
-
-        public class TriggerRelay : MonoBehaviour
-        {
-            public IslandLandmassBarrier TargetBarrier;
-
-            private void OnTriggerStay(Collider other)
-            {
-                if (TargetBarrier != null)
-                {
-                    TargetBarrier.HandleShallowTriggerStay(other);
-                }
-            }
         }
     }
 }

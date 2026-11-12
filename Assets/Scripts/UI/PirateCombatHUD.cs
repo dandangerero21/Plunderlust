@@ -213,6 +213,7 @@ namespace Plunderlust.UI
         private void OnGUI()
         {
             if (GameOverUI.IsGameOver) return;
+            if (SeaChartMapUI.Instance != null && SeaChartMapUI.Instance.IsOpen) return;
             InitStyles();
 
             if (_enableLegacyOnGUI)
@@ -319,26 +320,14 @@ namespace Plunderlust.UI
                 int max = _playerCargo.MaxCargoCapacity;
 
                 System.Text.StringBuilder sb = new System.Text.StringBuilder();
-                sb.Append($"Hold: {used}/{max} | ✦{gold}g");
+                sb.Append($"Hold: {used}/{max} | {gold}g");
                 for (int i = 1; i <= 8; i++)
                 {
                     CargoItemType type = (CargoItemType)i;
                     int count = _playerCargo.GetItemCount(type);
                     if (count > 0)
                     {
-                        string icon = type switch
-                        {
-                            CargoItemType.Timber => "🪵",
-                            CargoItemType.Canvas => "⛵",
-                            CargoItemType.Cannonballs => "💣",
-                            CargoItemType.Sugar => "🍬",
-                            CargoItemType.Rum => "🍾",
-                            CargoItemType.Spices => "🌿",
-                            CargoItemType.TreasureMap => "🗺️",
-                            CargoItemType.Silk => "🧣",
-                            _ => ""
-                        };
-                        sb.Append($" | {icon}{type}:{count}");
+                        sb.Append($" | {type}:{count}");
                     }
                 }
 
@@ -407,7 +396,7 @@ namespace Plunderlust.UI
                 if (Plunderlust.World.TreasureManager.Instance.GetNearestTreasureBearing(out float dist, out float bearing))
                 {
                     string cardinal = GetCardinalHeading(bearing);
-                    GUI.Label(new Rect(20f, curY, panelWidth - 20f, 16f), $"<color=#FFD700>🗺️ MAP BEARING:</color> {dist:F0}m [{cardinal} {bearing:F0}°]", _statLabelStyle);
+                    GUI.Label(new Rect(20f, curY, panelWidth - 20f, 16f), $"<color=#FFD700>[MAP BEARING]:</color> {dist:F0}m [{cardinal} {bearing:F0} deg]", _statLabelStyle);
                     curY += 16f;
                 }
             }

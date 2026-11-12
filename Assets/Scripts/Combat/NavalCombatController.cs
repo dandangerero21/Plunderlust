@@ -79,8 +79,9 @@ namespace Plunderlust.Combat
         public float StarboardReloadNormalized => Mathf.Clamp01(_starboardReloadTimer / Mathf.Max(0.1f, GetEffectiveReloadTime()));
         public float ForwardReloadNormalized => Mathf.Clamp01(_forwardReloadTimer / Mathf.Max(0.1f, GetEffectiveReloadTime() * 0.7f));
 
-        public bool CanFirePort => _portReloadTimer <= 0f && (_subsystems == null || !_subsystems.IsSinking) && GetActivePortCannons() > 0;
-        public bool CanFireStarboard => _starboardReloadTimer <= 0f && (_subsystems == null || !_subsystems.IsSinking) && GetActiveStarboardCannons() > 0;
+        // ponytail: If small craft has forward swivel gun and no broadsides, CanFirePort/Starboard delegates to swivel reload
+        public bool CanFirePort => (_subsystems == null || !_subsystems.IsSinking) && (_portCannonsCount > 0 ? (_portReloadTimer <= 0f && GetActivePortCannons() > 0) : CanFireForward);
+        public bool CanFireStarboard => (_subsystems == null || !_subsystems.IsSinking) && (_starboardCannonsCount > 0 ? (_starboardReloadTimer <= 0f && GetActiveStarboardCannons() > 0) : CanFireForward);
         public bool CanFireForward => _hasForwardSwivelGun && _forwardReloadTimer <= 0f && (_subsystems == null || !_subsystems.IsSinking);
 
         public float AimPitchAngle

@@ -48,6 +48,7 @@ namespace Plunderlust.Shipyard
         private GUIStyle _cardTitleStyle;
         private GUIStyle _bodyStyle;
         private GUIStyle _costStyle;
+        private GUIStyle _btnStyle;
         private Texture2D _bgTexture;
         private Texture2D _cardBgTexture;
         private bool _stylesInitialized = false;
@@ -114,7 +115,7 @@ namespace Plunderlust.Shipyard
 
             _windowTitleStyle = new GUIStyle
             {
-                fontSize = 22,
+                fontSize = 24,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
@@ -122,7 +123,7 @@ namespace Plunderlust.Shipyard
 
             _subTitleStyle = new GUIStyle
             {
-                fontSize = 15,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
@@ -130,7 +131,7 @@ namespace Plunderlust.Shipyard
 
             _cardTitleStyle = new GUIStyle
             {
-                fontSize = 15,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
@@ -138,7 +139,7 @@ namespace Plunderlust.Shipyard
 
             _bodyStyle = new GUIStyle
             {
-                fontSize = 13,
+                fontSize = 14,
                 fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.MiddleLeft,
                 wordWrap = true
@@ -147,11 +148,18 @@ namespace Plunderlust.Shipyard
 
             _costStyle = new GUIStyle
             {
-                fontSize = 14,
+                fontSize = 15,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleRight
             };
             _costStyle.normal.textColor = new Color(0.35f, 1f, 0.45f);
+
+            _btnStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
 
             _stylesInitialized = true;
         }
@@ -167,12 +175,13 @@ namespace Plunderlust.Shipyard
         private void OnGUI()
         {
             if (!_isOpen) return;
+            if (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) return;
 
             GUI.depth = -100;
             InitStyles();
 
-            float dialogWidth = 860f;
-            float dialogHeight = 600f;
+            float dialogWidth = Mathf.Min(Screen.width * 0.94f, 1020f);
+            float dialogHeight = Mathf.Min(Screen.height * 0.92f, 680f);
             float startX = (Screen.width - dialogWidth) * 0.5f;
             float startY = (Screen.height - dialogHeight) * 0.5f;
 
@@ -180,10 +189,10 @@ namespace Plunderlust.Shipyard
             GUI.DrawTexture(dialogRect, _bgTexture);
 
             // Title Header & Close Button
-            string title = $"🛠️ {_activeDrydock?.ShipyardName.ToUpper()} (HULL REFIT & OVERHAUL)";
-            GUI.Label(new Rect(startX + 40f, startY + 14f, dialogWidth - 80f, 30f), title, _windowTitleStyle);
+            string title = $"{_activeDrydock?.ShipyardName.ToUpper()} (HULL REFIT & OVERHAUL)";
+            GUI.Label(new Rect(startX + 40f, startY + 14f, dialogWidth - 80f, 32f), title, _windowTitleStyle);
 
-            if (GUI.Button(new Rect(startX + dialogWidth - 46f, startY + 12f, 34f, 30f), "X"))
+            if (GUI.Button(new Rect(startX + dialogWidth - 52f, startY + 12f, 40f, 36f), "X", _btnStyle))
             {
                 CloseView();
             }
@@ -192,20 +201,20 @@ namespace Plunderlust.Shipyard
             int gold = _playerCargo != null ? _playerCargo.CurrentGold : 0;
             int timber = _playerCargo != null ? _playerCargo.GetItemCount(CargoItemType.Timber) : 0;
             int canvas = _playerCargo != null ? _playerCargo.GetItemCount(CargoItemType.Canvas) : 0;
-            string resText = $"Shipwright Materials: ✦ {gold} Gold  |  🪵 {timber} Timber  |  ⛵ {canvas} Canvas";
-            GUI.Label(new Rect(startX + 24f, startY + 46f, dialogWidth - 48f, 22f), resText, _bodyStyle);
+            string resText = $"Shipwright Materials: {gold} Gold  |  {timber} Timber  |  {canvas} Canvas";
+            GUI.Label(new Rect(startX + 24f, startY + 50f, dialogWidth - 48f, 26f), resText, _bodyStyle);
 
             // 1. Current Flagship Status Card
-            DrawCurrentFlagshipCard(startX + 24f, startY + 74f, dialogWidth - 48f);
+            DrawCurrentFlagshipCard(startX + 24f, startY + 80f, dialogWidth - 48f);
 
             // 2. Full Hull Overhaul Button
-            DrawOverhaulCard(startX + 24f, startY + 170f, dialogWidth - 48f);
+            DrawOverhaulCard(startX + 24f, startY + 180f, dialogWidth - 48f);
 
             // 3. Available Hull Upgrade Section
-            DrawUpgradeSection(startX + 24f, startY + 252f, dialogWidth - 48f);
+            DrawUpgradeSection(startX + 24f, startY + 266f, dialogWidth - 48f);
 
             // Depart Slipway Button
-            if (GUI.Button(new Rect(startX + dialogWidth - 230f, startY + dialogHeight - 46f, 210f, 36f), "Depart Drydock"))
+            if (GUI.Button(new Rect(startX + dialogWidth - 230f, startY + dialogHeight - 56f, 206f, 44f), "Depart Drydock", _btnStyle))
             {
                 CloseView();
             }
@@ -213,7 +222,7 @@ namespace Plunderlust.Shipyard
 
         private void DrawCurrentFlagshipCard(float x, float y, float width)
         {
-            GUI.DrawTexture(new Rect(x, y, width, 84f), _cardBgTexture);
+            GUI.DrawTexture(new Rect(x, y, width, 88f), _cardBgTexture);
 
             ShipTier currentTier = _playerSubsystems != null && _playerSubsystems.HullData != null
                 ? _playerSubsystems.HullData.Tier
@@ -228,7 +237,7 @@ namespace Plunderlust.Shipyard
                 _ => currentTier.ToString()
             };
 
-            GUI.Label(new Rect(x + 16f, y + 10f, 400f, 22f), $"Active Hull: {tierName}", _cardTitleStyle);
+            GUI.Label(new Rect(x + 16f, y + 10f, width - 32f, 24f), $"Active Hull: {tierName}", _cardTitleStyle);
 
             float hull = _playerSubsystems != null ? _playerSubsystems.HullHealth : 100f;
             float maxHull = _playerSubsystems != null ? _playerSubsystems.MaxHullHealth : 100f;
@@ -237,25 +246,25 @@ namespace Plunderlust.Shipyard
             int hold = _playerCargo != null ? _playerCargo.MaxCargoCapacity : 24;
 
             string statsLine = $"Hull Integrity: {hull:F0}/{maxHull:F0} HP  |  Bilge Flooding: {bilge:F0}L  |  Cannons: {cannons}  |  Hold: {hold} units";
-            GUI.Label(new Rect(x + 16f, y + 36f, width - 32f, 20f), statsLine, _bodyStyle);
+            GUI.Label(new Rect(x + 16f, y + 36f, width - 32f, 22f), statsLine, _bodyStyle);
 
             string statusNotice = bilge > 10f || hull < maxHull * 0.9f
                 ? "<color=orange>Status: Hull damage or bilge flooding detected. Drydock overhaul recommended.</color>"
                 : "<color=lime>Status: Hull seaworthy and battle-ready.</color>";
-            GUI.Label(new Rect(x + 16f, y + 58f, width - 32f, 20f), statusNotice, _bodyStyle);
+            GUI.Label(new Rect(x + 16f, y + 60f, width - 32f, 22f), statusNotice, _bodyStyle);
         }
 
         private void DrawOverhaulCard(float x, float y, float width)
         {
-            GUI.DrawTexture(new Rect(x, y, width, 70f), _cardBgTexture);
+            GUI.DrawTexture(new Rect(x, y, width, 74f), _cardBgTexture);
 
-            GUI.Label(new Rect(x + 16f, y + 12f, 340f, 22f), "Complete Subsystem Overhaul & Bilge Pump", _subTitleStyle);
-            GUI.Label(new Rect(x + 16f, y + 36f, width - 260f, 22f), "Fully restores Hull, Sails, Rudder & Guns to 100% and pumps bilge dry.", _bodyStyle);
+            GUI.Label(new Rect(x + 16f, y + 12f, width - 260f, 24f), "Complete Subsystem Overhaul & Bilge Pump", _subTitleStyle);
+            GUI.Label(new Rect(x + 16f, y + 38f, width - 260f, 24f), "Fully restores Hull, Sails, Rudder & Guns to 100% and pumps bilge dry.", _bodyStyle);
 
             int overhaulCost = 45;
-            GUI.Label(new Rect(x + width - 250f, y + 12f, 230f, 20f), $"Fee: {overhaulCost} Gold", _costStyle);
+            GUI.Label(new Rect(x + width - 250f, y + 10f, 230f, 22f), $"Fee: {overhaulCost} Gold", _costStyle);
 
-            if (GUI.Button(new Rect(x + width - 220f, y + 32f, 200f, 32f), "Execute Overhaul"))
+            if (GUI.Button(new Rect(x + width - 230f, y + 32f, 215f, 36f), "Execute Overhaul", _btnStyle))
             {
                 if (ShipyardManager.Instance != null && _playerShip != null)
                 {
@@ -266,14 +275,14 @@ namespace Plunderlust.Shipyard
 
         private void DrawUpgradeSection(float x, float y, float width)
         {
-            GUI.Label(new Rect(x, y, width, 22f), "Available Hull Upgrades & Refits:", _subTitleStyle);
+            GUI.Label(new Rect(x, y, width, 24f), "Available Hull Upgrades & Refits:", _subTitleStyle);
 
             ShipTier currentTier = _playerSubsystems != null && _playerSubsystems.HullData != null
                 ? _playerSubsystems.HullData.Tier
                 : ShipTier.Tier1_LeakyRowboat;
 
-            float cardY = y + 26f;
-            float cardHeight = 94f;
+            float cardY = y + 28f;
+            float cardHeight = 100f;
 
             // Tier 2 Coastal Cutter Upgrade
             if (currentTier < ShipTier.Tier2_CoastalCutter)
@@ -305,9 +314,9 @@ namespace Plunderlust.Shipyard
             }
             else if (currentTier >= ShipTier.Tier4_RoyalGalleon)
             {
-                Rect maxRect = new Rect(x, cardY, width, 60f);
+                Rect maxRect = new Rect(x, cardY, width, 64f);
                 GUI.DrawTexture(maxRect, _cardBgTexture);
-                GUI.Label(new Rect(x + 20f, cardY + 20f, width - 40f, 24f), "👑 Flagship is at Maximum Hull Tier (Royal Galleon Three-Deck Fortress)!", _cardTitleStyle);
+                GUI.Label(new Rect(x + 20f, cardY + 20f, width - 40f, 26f), "[MAX TIER] Flagship is at Maximum Hull Tier (Royal Galleon Three-Deck Fortress)!", _cardTitleStyle);
             }
         }
 
@@ -316,18 +325,18 @@ namespace Plunderlust.Shipyard
             Rect cardRect = new Rect(x, y, width, height);
             GUI.DrawTexture(cardRect, _cardBgTexture);
 
-            GUI.Label(new Rect(x + 16f, y + 10f, 400f, 22f), title, _cardTitleStyle);
-            GUI.Label(new Rect(x + 16f, y + 34f, width - 260f, 40f), specs, _bodyStyle);
+            GUI.Label(new Rect(x + 16f, y + 10f, width - 270f, 24f), title, _cardTitleStyle);
+            GUI.Label(new Rect(x + 16f, y + 36f, width - 270f, 44f), specs, _bodyStyle);
 
             string costText = $"Cost: {gold}g + {timber} Timb + {canvas} Canv";
-            GUI.Label(new Rect(x + width - 260f, y + 10f, 240f, 22f), costText, _costStyle);
+            GUI.Label(new Rect(x + width - 270f, y + 10f, 255f, 24f), costText, _costStyle);
 
             string missingReason = string.Empty;
             bool canUpgrade = ShipyardManager.Instance != null && ShipyardManager.Instance.CanUpgradeTo(_playerShip, tier, out missingReason);
             string btnLabel = canUpgrade ? "Refit & Upgrade Hull" : "Materials Lacking";
 
             GUI.enabled = canUpgrade;
-            if (GUI.Button(new Rect(x + width - 220f, y + 42f, 200f, 38f), btnLabel))
+            if (GUI.Button(new Rect(x + width - 230f, y + 42f, 215f, 42f), btnLabel, _btnStyle))
             {
                 if (ShipyardManager.Instance != null && _playerShip != null)
                 {
@@ -339,7 +348,7 @@ namespace Plunderlust.Shipyard
 
             if (!canUpgrade && !string.IsNullOrEmpty(missingReason))
             {
-                GUI.Label(new Rect(x + 16f, y + 74f, width - 240f, 18f), $"<color=orange>{missingReason}</color>", _bodyStyle);
+                GUI.Label(new Rect(x + 16f, y + 78f, width - 250f, 20f), $"<color=orange>{missingReason}</color>", _bodyStyle);
             }
         }
     }

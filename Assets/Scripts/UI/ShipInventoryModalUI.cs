@@ -141,6 +141,16 @@ namespace Plunderlust.UI
 
         private void Update()
         {
+            // ponytail: Hide HUD cargo button when Sea Chart is open
+            if (_hudButtonGo != null && SeaChartMapUI.Instance != null)
+            {
+                bool shouldShow = !SeaChartMapUI.Instance.IsOpen;
+                if (_hudButtonGo.activeSelf != shouldShow)
+                {
+                    _hudButtonGo.SetActive(shouldShow);
+                }
+            }
+
             if (Input.GetKeyDown(KeyCode.I))
             {
                 ToggleModal();
@@ -161,11 +171,11 @@ namespace Plunderlust.UI
                 int gold = _cargoHold.CurrentGold;
                 int used = _cargoHold.TotalCargoUnits;
                 int max = _cargoHold.MaxCargoCapacity;
-                _hudButtonText.text = $"📦 <b>HOLD</b> [{used}/{max}]  ✦ <b>{gold}g</b>";
+                _hudButtonText.text = $"<b>HOLD</b> [{used}/{max}]  <b>{gold}g</b>";
             }
             else
             {
-                _hudButtonText.text = "📦 <b>CARGO HOLD</b>";
+                _hudButtonText.text = "<b>CARGO HOLD</b>";
             }
         }
 
@@ -185,7 +195,7 @@ namespace Plunderlust.UI
             int currentGold = _cargoHold.CurrentGold;
             if (_treasuryDoubloonText != null)
             {
-                _treasuryDoubloonText.text = $"🪙 {currentGold:N0} GOLD DOUBLOONS";
+                _treasuryDoubloonText.text = $"{currentGold:N0} GOLD DOUBLOONS";
             }
 
             // 3. Capacity Gauge
@@ -289,7 +299,7 @@ namespace Plunderlust.UI
             textRt.sizeDelta = Vector2.zero;
 
             _hudButtonText = textGo.AddComponent<Text>();
-            _hudButtonText.text = "📦 <b>HOLD [0/20]  ✦ 100g</b>";
+            _hudButtonText.text = "<b>HOLD [0/20]  100g</b>";
             _hudButtonText.font = NauticalUITheme.GetDefaultFont();
             _hudButtonText.fontSize = 13;
             _hudButtonText.alignment = TextAnchor.MiddleCenter;
@@ -396,7 +406,7 @@ namespace Plunderlust.UI
             xRt.anchorMax = Vector2.one;
             xRt.sizeDelta = Vector2.zero;
             Text xText = xGo.AddComponent<Text>();
-            xText.text = "✕";
+            xText.text = "X";
             xText.font = NauticalUITheme.GetDefaultFont();
             xText.fontSize = 22;
             xText.fontStyle = FontStyle.Bold;
@@ -427,7 +437,7 @@ namespace Plunderlust.UI
             gtRt.anchorMax = Vector2.one;
             gtRt.sizeDelta = Vector2.zero;
             _treasuryDoubloonText = goldTxtGo.AddComponent<Text>();
-            _treasuryDoubloonText.text = "🪙 100 GOLD DOUBLOONS";
+            _treasuryDoubloonText.text = "100 GOLD DOUBLOONS";
             _treasuryDoubloonText.font = NauticalUITheme.GetDefaultFont();
             _treasuryDoubloonText.fontSize = 13;
             _treasuryDoubloonText.fontStyle = FontStyle.Bold;
@@ -492,14 +502,14 @@ namespace Plunderlust.UI
             // 8 Cargo Items metadata: Type, Icon, Name, Role
             (CargoItemType type, string icon, string name, string role)[] items = new (CargoItemType, string, string, string)[]
             {
-                (CargoItemType.Timber,       "🪵", "Timber",       "Hull Repairs (Carpenter)"),
-                (CargoItemType.Canvas,       "⛵", "Canvas",       "Rigging (Sailmaker)"),
-                (CargoItemType.Cannonballs,  "💣", "Iron Shot",    "Gun Deck Ordnance"),
-                (CargoItemType.Sugar,        "🍬", "Sugar",        "Merchant Guild Cargo"),
-                (CargoItemType.Rum,          "🍾", "Fine Rum",     "Corsair Tavern Spirits"),
-                (CargoItemType.Spices,       "🌶️", "Rare Spices",  "High-Value Trade Cargo"),
-                (CargoItemType.Silk,         "🧵", "Imperial Silk","Luxury Trade Cargo"),
-                (CargoItemType.TreasureMap,  "🗺️", "Treasure Map", "Charts to Hidden Atolls")
+                (CargoItemType.Timber,       "[WOOD]", "Timber",       "Hull Repairs (Carpenter)"),
+                (CargoItemType.Canvas,       "[SAIL]", "Canvas",       "Rigging (Sailmaker)"),
+                (CargoItemType.Cannonballs,  "[SHOT]", "Iron Shot",    "Gun Deck Ordnance"),
+                (CargoItemType.Sugar,        "[SUGR]", "Sugar",        "Merchant Guild Cargo"),
+                (CargoItemType.Rum,          "[RUM]",  "Fine Rum",     "Corsair Tavern Spirits"),
+                (CargoItemType.Spices,       "[SPIC]", "Rare Spices",  "High-Value Trade Cargo"),
+                (CargoItemType.Silk,         "[SILK]", "Imperial Silk","Luxury Trade Cargo"),
+                (CargoItemType.TreasureMap,  "[MAP]",  "Treasure Map", "Charts to Hidden Atolls")
             };
 
             const int cols = 4;

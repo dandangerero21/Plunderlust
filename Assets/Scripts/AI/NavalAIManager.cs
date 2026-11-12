@@ -5,6 +5,7 @@ using Plunderlust.Core.Data;
 using Plunderlust.Factions;
 using Plunderlust.Loot;
 using Plunderlust.Ocean;
+using Plunderlust.Quests;
 using Plunderlust.Ship;
 using Plunderlust.Subsystems;
 using UnityEngine;
@@ -12,10 +13,10 @@ using UnityEngine;
 namespace Plunderlust.AI
 {
     /// <summary>
-    /// Phase 4 Naval Artificial Intelligence & Fleet Traffic Coordinator.
-    /// Manages ambient faction patrols on trade lanes between Port Royal Haven and Smuggler Cove,
-    /// and dynamically dispatches Imperial Navy Hunter Squadrons when player reputation drops to Hostile/Hunted.
-    /// Employs diverse Kenney ship models (ship-small, ship-medium, ship-pirate-small) scaled to realistic naval proportions.
+    /// Phase 4 & 7 Naval Artificial Intelligence & Fleet Traffic Coordinator.
+    /// Manages level-matched ambient fleet traffic across the archipelago,
+    /// guarantees distant high-seas bounty target spawns, and maintains a 4:6 pirate to lawful encounter ratio.
+    /// Employs diverse Kenney ship models scaled to realistic naval proportions.
     /// </summary>
     [DefaultExecutionOrder(-100)]
     public class NavalAIManager : MonoBehaviour
@@ -24,7 +25,7 @@ namespace Plunderlust.AI
 
         [Header("Ambient Fleet Settings")]
         [SerializeField] private bool _spawnAmbientFleetOnStart = true;
-        [SerializeField] private int _maxActiveAIShips = 5;
+        [SerializeField] private int _maxActiveAIShips = 12;
 
         // Deep-water navigable sea routes (kept >55m away from all island shores)
         private static readonly Vector3[] TradeLaneAlpha = new Vector3[]
@@ -133,25 +134,30 @@ namespace Plunderlust.AI
 
             if (playerTier <= ShipTier.Tier1_LeakyRowboat)
             {
-                // Player is in a small rowboat: small boats spawn most frequently,
-                // while medium and large ships remain on the horizon
-                if (roll < 0.65f) return ShipTier.Tier2_CoastalCutter;
-                if (roll < 0.90f) return ShipTier.Tier3_PirateBrigantine;
-                return ShipTier.Tier4_RoyalGalleon;
+                // Player is in a small rowboat: Level-matched skiffs spawn 70% of the time,
+                // while light sloops make up the remaining 30%. No giant warships!
+                return roll < 0.70f ? ShipTier.Tier1_LeakyRowboat : ShipTier.Tier2_CoastalCutter;
             }
             else if (playerTier == ShipTier.Tier2_CoastalCutter)
             {
                 // Player has upgraded to Coastal Cutter: balanced encounter mix
-                if (roll < 0.35f) return ShipTier.Tier2_CoastalCutter;
-                if (roll < 0.85f) return ShipTier.Tier3_PirateBrigantine;
+                if (roll < 0.25f) return ShipTier.Tier1_LeakyRowboat;
+                if (roll < 0.80f) return ShipTier.Tier2_CoastalCutter;
+                return ShipTier.Tier3_PirateBrigantine;
+            }
+            else if (playerTier == ShipTier.Tier3_PirateBrigantine)
+            {
+                // Player commands a Brigantine
+                if (roll < 0.15f) return ShipTier.Tier2_CoastalCutter;
+                if (roll < 0.75f) return ShipTier.Tier3_PirateBrigantine;
                 return ShipTier.Tier4_RoyalGalleon;
             }
             else
             {
-                // Player commands a heavy Brigantine or Galleon: larger armada vessels dominate
-                if (roll < 0.20f) return ShipTier.Tier2_CoastalCutter;
-                if (roll < 0.65f) return ShipTier.Tier3_PirateBrigantine;
-                return ShipTier.Tier4_RoyalGalleon;
+                // High-tier naval combat (Frigate / Galleon / Ghost Ship)
+                if (roll < 0.35f) return ShipTier.Tier3_PirateBrigantine;
+                if (roll < 0.85f) return ShipTier.Tier4_RoyalGalleon;
+                return ShipTier.Tier5_GhostGalleon;
             }
         }
 
@@ -195,43 +201,77 @@ namespace Plunderlust.AI
             return pool[UnityEngine.Random.Range(0, pool.Length)];
         }
 
+        /// <summary>
+        /// Selects a faction according to the exact 4:6 Pirate to Lawful/Merchant ratio.
+        /// </summary>
+        public static FactionType RollBalancedFaction()
+        {
+            float fRoll = UnityEngine.Random.value;
+            if (fRoll < 0.40f)
+            {
+                return FactionType.CorsairBrethren; // 40% Pirates
+            }
+            if (fRoll < 0.75f)
+            {
+                return FactionType.ImperialNavy;    // 35% Imperial Navy
+            }
+            return (fRoll < 0.90f) ? FactionType.MerchantGuild : FactionType.FreeportTraders; // 25% Merchant Traders
+        }
+
         public void SpawnAmbientFleet()
         {
-            // 1. Merchant Trader (Open East Sea channel)
-            ShipTier t1 = PickNPCTierBasedOnPlayer();
-            SpawnAIShipTier(GeneratePirateShipName(FactionType.MerchantGuild), FactionType.MerchantGuild, new Vector3(95f, 0.5f, 30f), TradeLaneAlpha, t1);
+            // Initial fleet scattered across the Caribbean Archipelago (8 vessels)
+            Vector3[] initialSpawnOffsets = new Vector3[]
+            {
+                new Vector3(95f, 0.5f, 30f),
+                new Vector3(85f, 0.5f, 85f),
+                new Vector3(-95f, 0.5f, 40f),
+                new Vector3(15f, 0.5f, -60f),
+                new Vector3(-65f, 0.5f, 130f),
+                new Vector3(120f, 0.5f, -90f),
+                new Vector3(-130f, 0.5f, 80f),
+                new Vector3(-20f, 0.5f, 160f)
+            };
 
-            // 2. Imperial Navy Patrol (North-East deep water channel)
-            ShipTier t2 = PickNPCTierBasedOnPlayer();
-            SpawnAIShipTier(GeneratePirateShipName(FactionType.ImperialNavy), FactionType.ImperialNavy, new Vector3(85f, 0.5f, 85f), NavyPatrolRoute, t2);
+            for (int i = 0; i < initialSpawnOffsets.Length; i++)
+            {
+                FactionType faction = RollBalancedFaction();
+                ShipTier tier = PickNPCTierBasedOnPlayer();
+                Vector3 pos = FindSafeSpawnPoint(initialSpawnOffsets[i]);
 
-            // 3. Corsair Raider (Far West deep waters)
-            ShipTier t3 = PickNPCTierBasedOnPlayer();
-            SpawnAIShipTier(GeneratePirateShipName(FactionType.CorsairBrethren), FactionType.CorsairBrethren, new Vector3(-95f, 0.5f, 40f), CorsairRaiderRoute, t3);
+                Vector3[] route = (faction == FactionType.CorsairBrethren) 
+                    ? CorsairRaiderRoute 
+                    : (faction == FactionType.ImperialNavy ? NavyPatrolRoute : TradeLaneAlpha);
+
+                SpawnAIShipTier(GeneratePirateShipName(faction), faction, pos, route, tier);
+            }
         }
 
         private void SpawnDynamicPatrolShip()
         {
             ShipTier tier = PickNPCTierBasedOnPlayer();
-            FactionType faction = (FactionType)UnityEngine.Random.Range(0, 4);
-            Vector3[] route = TradeLaneAlpha;
-            Vector3 spawnPos = new Vector3(70f, 0.5f, 95f);
+            FactionType faction = RollBalancedFaction();
 
-            switch (faction)
+            // Scatter dynamically around the player so the open sea remains populated wherever the player voyages
+            GameObject playerGo = GameObject.FindGameObjectWithTag("Player");
+            Vector3 center = playerGo != null ? playerGo.transform.position : Vector3.zero;
+
+            float angle = UnityEngine.Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float dist = UnityEngine.Random.Range(140f, 280f);
+            Vector3 rawPos = center + new Vector3(Mathf.Cos(angle) * dist, 0.5f, Mathf.Sin(angle) * dist);
+
+            rawPos.x = Mathf.Clamp(rawPos.x, -460f, 460f);
+            rawPos.z = Mathf.Clamp(rawPos.z, -460f, 460f);
+
+            Vector3 spawnPos = FindSafeSpawnPoint(rawPos);
+
+            Vector3[] route = new Vector3[]
             {
-                case FactionType.ImperialNavy:
-                    route = NavyPatrolRoute;
-                    spawnPos = new Vector3(90f, 0.5f, -15f);
-                    break;
-                case FactionType.CorsairBrethren:
-                    route = CorsairRaiderRoute;
-                    spawnPos = new Vector3(-95f, 0.5f, 40f);
-                    break;
-                default:
-                    route = TradeLaneAlpha;
-                    spawnPos = new Vector3(70f, 0.5f, 95f);
-                    break;
-            }
+                spawnPos + new Vector3(50f, 0f, 40f),
+                spawnPos + new Vector3(-45f, 0f, 65f),
+                spawnPos + new Vector3(-65f, 0f, -35f),
+                spawnPos + new Vector3(35f, 0f, -55f)
+            };
 
             string shipName = GeneratePirateShipName(faction);
             SpawnAIShipTier(shipName, faction, spawnPos, route, tier);
@@ -337,6 +377,17 @@ namespace Plunderlust.AI
 
             switch (tier)
             {
+                case ShipTier.Tier1_LeakyRowboat:
+                    modelPath = "Assets/kenney_pirate-kit/Models/FBX format/boat-row-small.fbx";
+                    profilePath = "Assets/Settings/ShipData/ShipHull_Tier1_LeakyRowboat.asset";
+                    scale = 0.70f;
+                    mass = 350f;
+                    colliderSize = new Vector3(1.6f, 1.4f, 3.2f);
+                    colCenter = new Vector3(0f, 0.6f, 0f);
+                    probeFwd = 1.2f;
+                    probeLat = 0.6f;
+                    break;
+
                 case ShipTier.Tier3_PirateBrigantine:
                     modelPath = faction == FactionType.CorsairBrethren
                         ? "Assets/kenney_pirate-kit/Models/FBX format/ship-pirate-medium.fbx"
@@ -363,6 +414,17 @@ namespace Plunderlust.AI
                     probeLat = 2.0f;
                     break;
 
+                case ShipTier.Tier5_GhostGalleon:
+                    modelPath = "Assets/kenney_pirate-kit/Models/FBX format/ship-ghost.fbx";
+                    profilePath = "Assets/Settings/ShipData/ShipHull_Tier5_GhostGalleon.asset";
+                    scale = 1.25f;
+                    mass = 3200f;
+                    colliderSize = new Vector3(4.2f, 3.5f, 14.5f);
+                    colCenter = new Vector3(0f, 1.8f, 0f);
+                    probeFwd = 6.0f;
+                    probeLat = 2.2f;
+                    break;
+
                 default: // Tier 2 Coastal Cutter (Sloop)
                     modelPath = faction == FactionType.CorsairBrethren
                         ? "Assets/kenney_pirate-kit/Models/FBX format/ship-pirate-small.fbx"
@@ -378,6 +440,39 @@ namespace Plunderlust.AI
             }
 
             return SpawnAIShipInternal(shipName, faction, worldPos, waypoints, modelPath, profilePath, scale, mass, colliderSize, colCenter, probeFwd, probeLat);
+        }
+
+        /// <summary>
+        /// Guaranteed High-Seas Bounty Target Spawner.
+        /// Instantiates a named boss vessel far away with persistent tracking and marks it with BountyTargetMarker.
+        /// </summary>
+        public AIShipBrain SpawnBountyTargetShip(string captainName, ShipTier tier, FactionType faction, Vector3 spawnPosition, string bountyId)
+        {
+            Vector3 safePos = FindSafeSpawnPoint(spawnPosition);
+            Vector3[] bossPatrol = new Vector3[]
+            {
+                safePos + new Vector3(45f, 0f, 35f),
+                safePos + new Vector3(-35f, 0f, 50f),
+                safePos + new Vector3(-50f, 0f, -30f),
+                safePos + new Vector3(30f, 0f, -45f)
+            };
+
+            string shipName = $"[BOUNTY] {captainName}";
+            AIShipBrain bossBrain = SpawnAIShipTier(shipName, faction, safePos, bossPatrol, tier);
+            if (bossBrain != null)
+            {
+                BountyTargetMarker marker = bossBrain.gameObject.AddComponent<BountyTargetMarker>();
+                int reward = (int)tier * 180 + 150;
+                marker.Initialize(bountyId, captainName, reward);
+
+                // Give bounty captain reinforced hull durability
+                ShipSubsystemController sub = bossBrain.GetComponent<ShipSubsystemController>();
+                if (sub != null)
+                {
+                    sub.RepairSubsystem(ShipSubsystemType.Hull, 50f);
+                }
+            }
+            return bossBrain;
         }
 
         public AIShipBrain SpawnAIShip(
@@ -494,6 +589,17 @@ namespace Plunderlust.AI
             // Locomotion, Subsystems, Combat, Cargo
             ShipLocomotionController locomotion = shipGo.AddComponent<ShipLocomotionController>();
             if (hullProfile != null) locomotion.SetHullData(hullProfile);
+
+            // ponytail: apply hull profile to buoyancy so NPC rowboats don't get 8500N galleon lift and skim frictionless
+            if (hullProfile != null) buoyancy.SetHullData(hullProfile);
+
+            // Procedural Rowing Paddles for Tier 1 Rowboats & Skiffs
+            if ((hullProfile != null && hullProfile.SupportsRowing && !hullProfile.SupportsSails) ||
+                (!string.IsNullOrEmpty(modelPath) && modelPath.Contains("boat-row")))
+            {
+                var paddleAnim = shipGo.AddComponent<BoatPaddleAnimator>();
+                paddleAnim.InitializePaddles();
+            }
 
             ShipSubsystemController subsystems = shipGo.AddComponent<ShipSubsystemController>();
             if (hullProfile != null) subsystems.SetHullData(hullProfile);

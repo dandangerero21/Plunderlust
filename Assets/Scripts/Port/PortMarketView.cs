@@ -8,6 +8,7 @@ namespace Plunderlust.Port
     /// Interactive In-World Commodity Trading Market View.
     /// Allows the player to buy provisions and shipwright materials (Timber, Canvas, Cannonballs)
     /// and sell harvested cargo (Sugar, Rum, Spices, Treasure Maps) according to regional supply and demand.
+    /// Scaled with high-visibility, large pixel-art modal styling and zero runtime allocations.
     /// </summary>
     [DefaultExecutionOrder(110)]
     public class PortMarketView : MonoBehaviour
@@ -45,6 +46,7 @@ namespace Plunderlust.Port
         private GUIStyle _cardTitleStyle;
         private GUIStyle _bodyStyle;
         private GUIStyle _costStyle;
+        private GUIStyle _btnStyle;
         private Texture2D _bgTexture;
         private Texture2D _cardBgTexture;
         private bool _stylesInitialized = false;
@@ -105,13 +107,13 @@ namespace Plunderlust.Port
         {
             if (_stylesInitialized) return;
 
-            // 17th-Century Nautical Palette: Mahogany (#1B140E), Parchment (#D8C39E), Antique Brass (#C59B27)
+            // 17th-Century Nautical Palette: Mahogany, Parchment, Antique Brass
             _bgTexture = MakeTex(new Color(0.106f, 0.078f, 0.055f, 0.98f));
             _cardBgTexture = MakeTex(new Color(0.18f, 0.14f, 0.10f, 0.95f));
 
             _windowTitleStyle = new GUIStyle
             {
-                fontSize = 22,
+                fontSize = 24,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter
             };
@@ -119,7 +121,7 @@ namespace Plunderlust.Port
 
             _subTitleStyle = new GUIStyle
             {
-                fontSize = 15,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
@@ -127,7 +129,7 @@ namespace Plunderlust.Port
 
             _cardTitleStyle = new GUIStyle
             {
-                fontSize = 15,
+                fontSize = 16,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleLeft
             };
@@ -135,7 +137,7 @@ namespace Plunderlust.Port
 
             _bodyStyle = new GUIStyle
             {
-                fontSize = 13,
+                fontSize = 14,
                 fontStyle = FontStyle.Normal,
                 alignment = TextAnchor.MiddleLeft,
                 wordWrap = true
@@ -144,11 +146,18 @@ namespace Plunderlust.Port
 
             _costStyle = new GUIStyle
             {
-                fontSize = 14,
+                fontSize = 15,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleRight
             };
-            _costStyle.normal.textColor = new Color(0.12f, 0.55f, 0.40f); // Emerald Sea
+            _costStyle.normal.textColor = new Color(0.12f, 0.75f, 0.45f); // Emerald Sea
+
+            _btnStyle = new GUIStyle(GUI.skin.button)
+            {
+                fontSize = 14,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter
+            };
 
             _stylesInitialized = true;
         }
@@ -164,12 +173,13 @@ namespace Plunderlust.Port
         private void OnGUI()
         {
             if (!_isOpen || _activeMarket == null) return;
+            if (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) return;
 
             GUI.depth = -105;
             InitStyles();
 
-            float dialogWidth = 860f;
-            float dialogHeight = 580f;
+            float dialogWidth = Mathf.Min(Screen.width * 0.94f, 1020f);
+            float dialogHeight = Mathf.Min(Screen.height * 0.92f, 680f);
             float startX = (Screen.width - dialogWidth) * 0.5f;
             float startY = (Screen.height - dialogHeight) * 0.5f;
 
@@ -177,10 +187,10 @@ namespace Plunderlust.Port
             GUI.DrawTexture(dialogRect, _bgTexture);
 
             // Title & Close Button
-            string title = $"⚖️ {_portTitle.ToUpper()} (COMMODITY EXCHANGE)";
-            GUI.Label(new Rect(startX + 40f, startY + 14f, dialogWidth - 80f, 30f), title, _windowTitleStyle);
+            string title = $"{_portTitle.ToUpper()} (COMMODITY EXCHANGE)";
+            GUI.Label(new Rect(startX + 40f, startY + 14f, dialogWidth - 80f, 32f), title, _windowTitleStyle);
 
-            if (GUI.Button(new Rect(startX + dialogWidth - 46f, startY + 12f, 34f, 30f), "X"))
+            if (GUI.Button(new Rect(startX + dialogWidth - 52f, startY + 12f, 40f, 36f), "X", _btnStyle))
             {
                 CloseView();
             }
@@ -190,20 +200,27 @@ namespace Plunderlust.Port
             int usedHold = _playerCargo != null ? _playerCargo.TotalCargoUnits : 0;
             int maxHold = _playerCargo != null ? _playerCargo.MaxCargoCapacity : 24;
 
-            string purseText = $"Your Purse: ✦ {gold} Gold  |  Cargo Hold Space: {usedHold} / {maxHold} Units";
-            GUI.Label(new Rect(startX + 24f, startY + 46f, dialogWidth - 48f, 22f), purseText, _bodyStyle);
+            string purseText = $"Your Purse: {gold} Gold  |  Cargo Hold Space: {usedHold} / {maxHold} Units";
+            GUI.Label(new Rect(startX + 24f, startY + 50f, dialogWidth - 48f, 26f), purseText, _bodyStyle);
 
             // Column Header
-            float listY = startY + 74f;
-            GUI.Label(new Rect(startX + 36f, listY, 200f, 20f), "Commodity", _subTitleStyle);
-            GUI.Label(new Rect(startX + 220f, listY, 80f, 20f), "Port Stock", _subTitleStyle);
-            GUI.Label(new Rect(startX + 320f, listY, 100f, 20f), "Buy Price", _subTitleStyle);
-            GUI.Label(new Rect(startX + 430f, listY, 100f, 20f), "Sell Payout", _subTitleStyle);
-            GUI.Label(new Rect(startX + 550f, listY, 80f, 20f), "Your Hold", _subTitleStyle);
-            GUI.Label(new Rect(startX + 650f, listY, 170f, 20f), "Trade Actions", _subTitleStyle);
+            float listY = startY + 80f;
+            float col1 = startX + 36f;
+            float col2 = startX + dialogWidth * 0.28f;
+            float col3 = startX + dialogWidth * 0.40f;
+            float col4 = startX + dialogWidth * 0.52f;
+            float col5 = startX + dialogWidth * 0.65f;
+            float col6 = startX + dialogWidth * 0.77f;
 
-            listY += 24f;
-            float rowHeight = 44f;
+            GUI.Label(new Rect(col1, listY, 180f, 22f), "Commodity", _subTitleStyle);
+            GUI.Label(new Rect(col2, listY, 100f, 22f), "Port Stock", _subTitleStyle);
+            GUI.Label(new Rect(col3, listY, 100f, 22f), "Buy Price", _subTitleStyle);
+            GUI.Label(new Rect(col4, listY, 100f, 22f), "Sell Payout", _subTitleStyle);
+            GUI.Label(new Rect(col5, listY, 100f, 22f), "Your Hold", _subTitleStyle);
+            GUI.Label(new Rect(col6, listY, 180f, 22f), "Trade Actions", _subTitleStyle);
+
+            listY += 26f;
+            float rowHeight = 46f;
 
             var items = _activeMarket.Commodities;
             for (int i = 0; i < items.Count; i++)
@@ -212,36 +229,23 @@ namespace Plunderlust.Port
                 Rect rowRect = new Rect(startX + 24f, listY, dialogWidth - 48f, rowHeight);
                 GUI.DrawTexture(rowRect, _cardBgTexture);
 
-                string icon = item.itemType switch
-                {
-                    CargoItemType.Timber => "🪵",
-                    CargoItemType.Canvas => "⛵",
-                    CargoItemType.Cannonballs => "💣",
-                    CargoItemType.Sugar => "🍬",
-                    CargoItemType.Rum => "🍾",
-                    CargoItemType.Spices => "🌿",
-                    CargoItemType.Silk => "🧣",
-                    CargoItemType.TreasureMap => "🗺️",
-                    _ => "📦"
-                };
-
                 // Commodity Name & High Demand Tag
-                string nameText = $"{icon} {item.itemType}";
+                string nameText = $"{item.itemType}";
                 if (item.isHighDemand) nameText += " <color=lime>[HIGH DEMAND]</color>";
-                GUI.Label(new Rect(startX + 36f, listY + 12f, 180f, 22f), nameText, _bodyStyle);
+                GUI.Label(new Rect(col1, listY + 12f, dialogWidth * 0.24f, 24f), nameText, _bodyStyle);
 
                 // Port Stock
-                GUI.Label(new Rect(startX + 224f, listY + 12f, 80f, 22f), $"{item.stockCount}x", _bodyStyle);
+                GUI.Label(new Rect(col2, listY + 12f, 90f, 24f), $"{item.stockCount}x", _bodyStyle);
 
                 // Buy Price (Port sells to player)
-                GUI.Label(new Rect(startX + 320f, listY + 12f, 90f, 22f), $"✦ {item.buyPrice}g", _costStyle);
+                GUI.Label(new Rect(col3, listY + 12f, 90f, 24f), $"{item.buyPrice}g", _costStyle);
 
                 // Sell Payout (Port buys from player)
-                GUI.Label(new Rect(startX + 430f, listY + 12f, 90f, 22f), $"✦ {item.sellPrice}g", _costStyle);
+                GUI.Label(new Rect(col4, listY + 12f, 90f, 24f), $"{item.sellPrice}g", _costStyle);
 
                 // Player Hold Count
                 int inHold = _playerCargo != null ? _playerCargo.GetItemCount(item.itemType) : 0;
-                GUI.Label(new Rect(startX + 550f, listY + 12f, 80f, 22f), $"{inHold} in hold", _bodyStyle);
+                GUI.Label(new Rect(col5, listY + 12f, 100f, 24f), $"{inHold} in hold", _bodyStyle);
 
                 // Trade Buttons
                 bool canBuy = gold >= item.buyPrice && usedHold < maxHold && item.stockCount > 0;
@@ -249,20 +253,20 @@ namespace Plunderlust.Port
 
                 // [Buy 1]
                 GUI.enabled = canBuy;
-                if (GUI.Button(new Rect(startX + 650f, listY + 8f, 54f, 28f), "+1"))
+                if (GUI.Button(new Rect(col6, listY + 6f, 60f, 34f), "+1", _btnStyle))
                 {
                     _activeMarket.BuyCommodity(_playerCargo, item.itemType, 1, out _);
                 }
 
                 // [Sell 1]
                 GUI.enabled = canSell;
-                if (GUI.Button(new Rect(startX + 710f, listY + 8f, 54f, 28f), "-1"))
+                if (GUI.Button(new Rect(col6 + 66f, listY + 6f, 60f, 34f), "-1", _btnStyle))
                 {
                     _activeMarket.SellCommodity(_playerCargo, item.itemType, 1, out _);
                 }
 
                 // [Sell All]
-                if (GUI.Button(new Rect(startX + 770f, listY + 8f, 68f, 28f), "Sell All"))
+                if (GUI.Button(new Rect(col6 + 132f, listY + 6f, 85f, 34f), "Sell All", _btnStyle))
                 {
                     _activeMarket.SellCommodity(_playerCargo, item.itemType, inHold, out _);
                 }
@@ -272,7 +276,7 @@ namespace Plunderlust.Port
             }
 
             // Bottom Return Button
-            if (GUI.Button(new Rect(startX + dialogWidth - 210f, startY + dialogHeight - 46f, 190f, 36f), "Return to Sea"))
+            if (GUI.Button(new Rect(startX + dialogWidth - 230f, startY + dialogHeight - 56f, 206f, 44f), "Return to Sea", _btnStyle))
             {
                 CloseView();
             }

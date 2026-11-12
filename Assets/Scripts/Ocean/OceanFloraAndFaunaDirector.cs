@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Plunderlust.Ocean;
+using Plunderlust.Ship;
 using UnityEngine;
 
 namespace Plunderlust.World
@@ -383,15 +384,15 @@ namespace Plunderlust.World
         private TrailRenderer _dolphinTrail;
 
         private Transform _playerTransform;
-        private Vector3 _swimCenter;
-        private float _orbitAngle;
-        private float _orbitRadius;
-        private float _swimSpeed;
+        private float _currentSpeed = 2.0f;
+        private float _flankSide = 1.0f;
+        private float _flankSwitchTimer = 22f;
+        private float _idleAngle = 0f;
 
         private bool _isLeaping = false;
         private float _leapProgress = 0f;
         private float _leapTimer = 0f;
-        private float _nextLeapTime = 6f;
+        private float _nextLeapTime = 18f;
 
         private Vector3 _leapStartPos;
         private Vector3 _leapApexPos;
@@ -403,14 +404,34 @@ namespace Plunderlust.World
             _tailPivot = tailPivot;
             _dolphinTrail = dolphinTrail;
 
-            _orbitAngle = startOffset * 45f;
-            _orbitRadius = Random.Range(16f, 26f);
-            _swimSpeed = Random.Range(5.5f, 7.5f);
-            _nextLeapTime = Random.Range(18f, 32f) + startOffset;
+            _flankSide = (startOffset % 2.0f > 1.0f) ? -1.0f : 1.0f;
+            _flankSwitchTimer = Random.Range(20f, 35f);
+            _idleAngle = Random.Range(0f, 360f);
+            _currentSpeed = Random.Range(1.8f, 2.4f);
+            _nextLeapTime = Random.Range(20f, 36f) + startOffset;
 
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null) _playerTransform = player.transform;
-            _swimCenter = (_playerTransform != null) ? _playerTransform.position : Vector3.zero;
+
+            if (_playerTransform != null)
+            {
+                Vector3 pFwd = _playerTransform.forward;
+                pFwd.y = 0f;
+                if (pFwd.sqrMagnitude < 0.001f) pFwd = Vector3.forward;
+                pFwd.Normalize();
+                Vector3 pRight = Vector3.Cross(Vector3.up, pFwd);
+
+                Vector3 spawnPos = _playerTransform.position + (pFwd * 6f) + (pRight * (_flankSide * 8.5f));
+                float waveY = OceanWaveManager.GetWaveHeight(spawnPos.x, spawnPos.z, Time.time);
+                spawnPos.y = waveY - 0.35f;
+                transform.position = spawnPos;
+                transform.rotation = Quaternion.LookRotation(pFwd, Vector3.up);
+            }
+
+            if (_dolphinTrail != null)
+            {
+                _dolphinTrail.Clear();
+            }
         }
 
         private void Update()
@@ -436,59 +457,122 @@ namespace Plunderlust.World
 
         private void UpdateCruisingSwim(float dt, float time)
         {
-            // Follow player's flagship with wide escort circle
-            Vector3 targetCenter = _playerTransform.position;
-            _swimCenter = Vector3.Lerp(_swimCenter, targetCenter, dt * 1.2f);
+            // Switch bow-riding flanks periodically for natural playful pacing
+            _flankSwitchTimer -= dt;
+            if (_flankSwitchTimer <= 0f)
+            {
+                _flankSwitchTimer = Random.Range(24f, 42f);
+                _flankSide = -_flankSide;
+            }
 
-            _orbitAngle += (_swimSpeed / _orbitRadius) * dt * Mathf.Rad2Deg;
-            float rad = _orbitAngle * Mathf.Deg2Rad;
+            Vector3 playerPos = _playerTransform.position;
+            Vector3 playerFwd = _playerTransform.forward;
+            playerFwd.y = 0f;
+            if (playerFwd.sqrMagnitude < 0.001f) playerFwd = Vector3.forward;
+            playerFwd.Normalize();
+            Vector3 playerRight = Vector3.Cross(Vector3.up, playerFwd);
 
-            Vector3 currentPos = _swimCenter + new Vector3(Mathf.Cos(rad) * _orbitRadius, 0f, Mathf.Sin(rad) * _orbitRadius);
+            // Read actual ship speed in m/s
+            var loco = _playerTransform.GetComponent<ShipLocomotionController>();
+            float playerSpeedMs = loco != null ? Mathf.Abs(loco.CurrentSpeedKnots * 0.5144f) : 0f;
 
-            // Avoid swimming onto islands or wooden docks
+            Vector3 targetPos;
+            if (playerSpeedMs > 0.6f)
+            {
+                // Underway: escort just off the bow wave on the active flank
+                targetPos = playerPos + (playerFwd * 7.5f) + (playerRight * (_flankSide * 8.0f));
+            }
+            else
+            {
+                // Idle/anchored: slow, graceful circular perimeter orbit
+                _idleAngle += dt * 0.22f; // ~28s per full lazy orbit
+                targetPos = playerPos + new Vector3(Mathf.Cos(_idleAngle) * 14f, 0f, Mathf.Sin(_idleAngle) * 14f);
+            }
+
+            Vector3 toTarget = targetPos - transform.position;
+            toTarget.y = 0f;
+            float distToTarget = toTarget.magnitude;
+            Vector3 desiredDir = distToTarget > 0.1f ? (toTarget / distToTarget) : transform.forward;
+
+            // Anticipatory island avoidance (smooth directional blend, NEVER hard snap)
             for (int i = 0; i < IslandCenters.Length; i++)
             {
                 Vector3 isl = IslandCenters[i];
-                float distSq = (currentPos.x - isl.x) * (currentPos.x - isl.x) + (currentPos.z - isl.z) * (currentPos.z - isl.z);
-                if (distSq < IslandBufferRadius * IslandBufferRadius)
+                float distSq = (transform.position.x - isl.x) * (transform.position.x - isl.x) + (transform.position.z - isl.z) * (transform.position.z - isl.z);
+                float avoidRadius = IslandBufferRadius + 14f;
+                if (distSq < avoidRadius * avoidRadius)
                 {
-                    Vector3 away = new Vector3(currentPos.x - isl.x, 0f, currentPos.z - isl.z);
-                    if (away.sqrMagnitude < 0.001f) away = Vector3.forward;
-                    currentPos = isl + (away.normalized * (IslandBufferRadius + 4f));
-                    break;
+                    Vector3 away = transform.position - isl;
+                    away.y = 0f;
+                    if (away.sqrMagnitude > 0.001f)
+                    {
+                        float factor = 1.0f - Mathf.Clamp01(Mathf.Sqrt(distSq) / avoidRadius);
+                        desiredDir = Vector3.Slerp(desiredDir, away.normalized, factor * 0.85f).normalized;
+                    }
                 }
             }
 
-            float waveY = OceanWaveManager.GetWaveHeight(currentPos.x, currentPos.z, time);
-            currentPos.y = waveY - 0.55f; // Swim just beneath the water surface
+            // Smooth forward steering: rotate smoothly towards target heading
+            Quaternion targetRot = Quaternion.LookRotation(desiredDir, Vector3.up);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, 60f * dt);
 
-            // Calculate forward heading along the circular orbit tangent
-            Vector3 forward = new Vector3(-Mathf.Sin(rad), 0f, Mathf.Cos(rad));
-            transform.position = currentPos;
-            transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            // Realistic dolphin speed: calm cruising speed (1.8 to 2.8 m/s max)
+            float desiredSpeed = 2.0f;
+            if (playerSpeedMs > 1.0f)
+            {
+                // Keep company with moving ship, capped at a natural 2.8 m/s (approx 5.4 knots)
+                desiredSpeed = Mathf.Clamp(playerSpeedMs * 0.95f + 0.25f, 1.8f, 2.8f);
+            }
+            else
+            {
+                desiredSpeed = 1.8f;
+            }
 
-            // Tail swimming flutter
-            float tailWiggle = Mathf.Sin(time * 9.0f) * 18.0f;
+            if (distToTarget > 18.0f)
+            {
+                // Gently catch up if ship pulled ahead
+                desiredSpeed = Mathf.Min(desiredSpeed * 1.25f, 3.2f);
+            }
+            else if (distToTarget < 2.0f)
+            {
+                // Ease back when comfortably alongside
+                desiredSpeed *= 0.85f;
+            }
+
+            _currentSpeed = Mathf.MoveTowards(_currentSpeed, desiredSpeed, dt * 1.2f);
+
+            // Physical forward motion: ALWAYS move strictly forward along facing direction (zero sideways drift)
+            Vector3 fwd = transform.forward;
+            fwd.y = 0f;
+            fwd.Normalize();
+
+            Vector3 newPos = transform.position + (fwd * (_currentSpeed * dt));
+            float waveY = OceanWaveManager.GetWaveHeight(newPos.x, newPos.z, time);
+            newPos.y = waveY - 0.35f; // Swim naturally submerged just below wave surface
+            transform.position = newPos;
+
+            // Tail swimming flutter (slow, organic rhythmic sweep)
+            float tailWiggle = Mathf.Sin(time * 4.2f) * 12.0f;
             if (_tailPivot != null) _tailPivot.localRotation = Quaternion.Euler(tailWiggle, 0f, 0f);
 
-            // Leaping timer
+            // Periodic graceful leap
             _leapTimer += dt;
             if (_leapTimer >= _nextLeapTime)
             {
                 _leapTimer = 0f;
-                _nextLeapTime = Random.Range(20f, 40f);
-                StartLeap(currentPos, forward);
+                _nextLeapTime = Random.Range(24f, 42f);
+                StartLeap(transform.position, fwd);
             }
         }
 
         private void StartLeap(Vector3 startPos, Vector3 forward)
         {
-            // Prevent leaping onto land or docks
+            // Prevent leaping into landmasses
             for (int i = 0; i < IslandCenters.Length; i++)
             {
                 Vector3 isl = IslandCenters[i];
                 float distSq = (startPos.x - isl.x) * (startPos.x - isl.x) + (startPos.z - isl.z) * (startPos.z - isl.z);
-                if (distSq < IslandBufferRadius * IslandBufferRadius)
+                if (distSq < (IslandBufferRadius + 10f) * (IslandBufferRadius + 10f))
                 {
                     return;
                 }
@@ -497,25 +581,23 @@ namespace Plunderlust.World
             _isLeaping = true;
             _leapProgress = 0f;
             _leapStartPos = startPos;
-            _leapApexPos = startPos + forward * 6.5f + Vector3.up * Random.Range(2.4f, 3.8f);
-            _leapEndPos = startPos + forward * 13.0f;
-
-            // Trigger entry splash
-            TriggerSplash(_leapStartPos);
+            // Short, gentle, graceful leap arc (5.0m distance, 1.4m height)
+            _leapApexPos = startPos + (forward * 2.5f) + (Vector3.up * Random.Range(1.3f, 1.6f));
+            _leapEndPos = startPos + (forward * 5.0f);
+            _flankSide = -_flankSide; // Switch flanks on dive!
         }
 
         private void UpdateLeapArc(float dt, float time)
         {
-            _leapProgress += dt * 0.95f; // ~1.05s leap duration
+            _leapProgress += dt / 1.35f; // ~1.35s graceful slow-motion arc
             float t = Mathf.Clamp01(_leapProgress);
 
-            // Smooth parabolic arc
+            // Smooth parabolic Bezier trajectory
             Vector3 p0 = _leapStartPos;
             Vector3 p1 = _leapApexPos;
             Vector3 p2 = _leapEndPos;
             Vector3 pos = (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2;
 
-            // Tangent velocity vector for realistic pitching along the trajectory
             Vector3 tangent = 2 * (1 - t) * (p1 - p0) + 2 * t * (p2 - p1);
             if (tangent.sqrMagnitude > 0.001f)
             {
@@ -523,22 +605,22 @@ namespace Plunderlust.World
             }
             transform.position = pos;
 
-            // Flukes flutter energetically during airborne arc
             if (_tailPivot != null)
             {
-                _tailPivot.localRotation = Quaternion.Euler(Mathf.Sin(time * 16f) * 22f, 0f, 0f);
+                _tailPivot.localRotation = Quaternion.Euler(Mathf.Sin(time * 8f) * 14f, 0f, 0f);
             }
 
             if (t >= 1.0f)
             {
                 _isLeaping = false;
-                TriggerSplash(_leapEndPos);
+                transform.position = _leapEndPos;
+                Vector3 landingFwd = (p2 - p1);
+                landingFwd.y = 0f;
+                if (landingFwd.sqrMagnitude > 0.001f)
+                {
+                    transform.rotation = Quaternion.LookRotation(landingFwd.normalized, Vector3.up);
+                }
             }
-        }
-
-        private void TriggerSplash(Vector3 pos)
-        {
-            // TrailRenderer automatically handles water trail and leap trajectory smoothly with zero squares
         }
     }
 

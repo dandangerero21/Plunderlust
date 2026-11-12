@@ -32,8 +32,10 @@ namespace Plunderlust.Audio
         private const string PrefSfxVol = "Plunderlust_SfxVol";
 
         [Header("Inspector Audio Slots (Assign custom clips here)")]
-        [Tooltip("Background sea shanty voyage theme.")]
+        [Tooltip("Primary background sea shanty voyage theme.")]
         [SerializeField] private AudioClip _bgmVoyage;
+        [Tooltip("Playlist of voyage themes for extended sailing.")]
+        [SerializeField] private AudioClip[] _bgmVoyageTracks;
         [Tooltip("Atmospheric harbor main menu theme.")]
         [SerializeField] private AudioClip _bgmMainMenu;
         [Tooltip("Naval cannon broadside explosion.")]
@@ -129,6 +131,8 @@ namespace Plunderlust.Audio
         }
 
         private float _nextCreakTimer = 8f;
+        private bool _isVoyageMode = false;
+        private int _currentVoyageTrackIndex = 0;
 
         private void Update()
         {
@@ -139,6 +143,20 @@ namespace Plunderlust.Audio
                 if ((_musicSource != null && _musicSource.isPlaying) || (_ambientSource != null && _ambientSource.isPlaying))
                 {
                     PlaySFX(SFXType.WoodCreak, 0.12f);
+                }
+            }
+
+            // Multi-song voyage playlist auto-advance
+            if (_isVoyageMode && _musicSource != null && !_musicSource.isPlaying && _musicSource.clip != null)
+            {
+                if (_bgmVoyageTracks != null && _bgmVoyageTracks.Length > 1)
+                {
+                    PlayNextVoyageTrack();
+                }
+                else
+                {
+                    // Loop single track
+                    _musicSource.Play();
                 }
             }
         }
@@ -171,6 +189,13 @@ namespace Plunderlust.Audio
             PreloadClip(_sfxBell);
             PreloadClip(_sfxWaveLapping);
             PreloadClip(_bgmVoyage);
+            if (_bgmVoyageTracks != null)
+            {
+                for (int i = 0; i < _bgmVoyageTracks.Length; i++)
+                {
+                    PreloadClip(_bgmVoyageTracks[i]);
+                }
+            }
             PreloadClip(_bgmMainMenu);
             PreloadClip(_sfxUIClick);
         }
@@ -225,6 +250,8 @@ namespace Plunderlust.Audio
 
         public void PlayMainMenuMusic()
         {
+            _isVoyageMode = false;
+            _musicSource.loop = true;
             AudioClip clip = _bgmMainMenu != null ? _bgmMainMenu : GetOrCreateProcBGMMainMenu();
             if (_musicSource.clip != clip || !_musicSource.isPlaying)
             {
@@ -243,7 +270,22 @@ namespace Plunderlust.Audio
 
         public void PlayVoyageMusic()
         {
-            AudioClip clip = _bgmVoyage != null ? _bgmVoyage : GetOrCreateProcBGMVoyage();
+            _isVoyageMode = true;
+
+            AudioClip clip = null;
+            if (_bgmVoyageTracks != null && _bgmVoyageTracks.Length > 0)
+            {
+                int idx = Mathf.Clamp(_currentVoyageTrackIndex, 0, _bgmVoyageTracks.Length - 1);
+                clip = _bgmVoyageTracks[idx];
+                _musicSource.loop = (_bgmVoyageTracks.Length == 1);
+            }
+
+            if (clip == null)
+            {
+                clip = _bgmVoyage != null ? _bgmVoyage : GetOrCreateProcBGMVoyage();
+                _musicSource.loop = true;
+            }
+
             if (_musicSource.clip != clip || !_musicSource.isPlaying)
             {
                 _musicSource.clip = clip;
@@ -258,8 +300,43 @@ namespace Plunderlust.Audio
             }
         }
 
+        public void PlayNextVoyageTrack()
+        {
+            if (_bgmVoyageTracks == null || _bgmVoyageTracks.Length <= 1)
+            {
+                if (_musicSource != null) _musicSource.Play();
+                return;
+            }
+
+            _currentVoyageTrackIndex = (_currentVoyageTrackIndex + 1) % _bgmVoyageTracks.Length;
+            AudioClip nextClip = _bgmVoyageTracks[_currentVoyageTrackIndex];
+            if (nextClip != null && _musicSource != null)
+            {
+                _musicSource.clip = nextClip;
+                _musicSource.loop = false;
+                _musicSource.Play();
+                Debug.Log($"[NauticalAudioManager] Now playing voyage track {_currentVoyageTrackIndex + 1}/{_bgmVoyageTracks.Length}: {nextClip.name}");
+            }
+        }
+
+        public void SetVoyageTracks(AudioClip[] tracks)
+        {
+            if (tracks == null || tracks.Length == 0) return;
+            _bgmVoyageTracks = tracks;
+            _currentVoyageTrackIndex = 0;
+            for (int i = 0; i < tracks.Length; i++)
+            {
+                PreloadClip(tracks[i]);
+            }
+            if (_isVoyageMode)
+            {
+                PlayVoyageMusic();
+            }
+        }
+
         public void StopMusic()
         {
+            _isVoyageMode = false;
             if (_musicSource != null) _musicSource.Stop();
         }
 

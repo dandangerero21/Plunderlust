@@ -217,7 +217,7 @@ namespace Plunderlust.Ship
             string carpName = (_crew != null && _crew.Carpenter != null) ? _crew.Carpenter.OfficerName : "Carpenter";
             if (PirateCombatHUD.Instance != null)
             {
-                PirateCombatHUD.Instance.ShowBanner($"🪵 {carpName} patching hull breach (-1 Timber, +100 HP)!", Color.green, 3.0f);
+                PirateCombatHUD.Instance.ShowBanner($"{carpName} patching hull breach (-1 Timber, +100 HP)!", Color.green, 3.0f);
             }
 
             return true;
@@ -242,7 +242,7 @@ namespace Plunderlust.Ship
             string sailName = (_crew != null && _crew.Sailmaster != null) ? _crew.Sailmaster.OfficerName : "Sailmaster";
             if (PirateCombatHUD.Instance != null)
             {
-                PirateCombatHUD.Instance.ShowBanner($"⛵ {sailName} mending canvas rigging (-1 Canvas, +100 HP)!", Color.cyan, 3.0f);
+                PirateCombatHUD.Instance.ShowBanner($"{sailName} mending canvas rigging (-1 Canvas, +100 HP)!", Color.cyan, 3.0f);
             }
 
             return true;

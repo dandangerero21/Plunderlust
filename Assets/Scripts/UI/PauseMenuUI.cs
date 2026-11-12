@@ -98,6 +98,16 @@ namespace Plunderlust.UI
         {
             if (GameOverUI.IsGameOver) return;
 
+            // ponytail: Hide HUD pause button while Sea Chart is open
+            if (_hudButtonGo != null && SeaChartMapUI.Instance != null)
+            {
+                bool shouldShow = !SeaChartMapUI.Instance.IsOpen;
+                if (_hudButtonGo.activeSelf != shouldShow)
+                {
+                    _hudButtonGo.SetActive(shouldShow);
+                }
+            }
+
             // Toggle pause via Escape or P
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.P))
             {
@@ -115,6 +125,12 @@ namespace Plunderlust.UI
         {
             IsPaused = paused;
             Time.timeScale = paused ? 0.0f : 1.0f;
+
+            if (_canvas != null)
+            {
+                // ponytail: Rise above Sea Chart (800) when pause menu modal is open, sit at HUD layer (55) during gameplay
+                _canvas.sortingOrder = paused ? 850 : 55;
+            }
 
             if (_modalRootGo != null)
             {
@@ -204,7 +220,7 @@ namespace Plunderlust.UI
 
             _canvas = canvasGo.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            _canvas.sortingOrder = 600; // Above general HUD, below system alerts
+            _canvas.sortingOrder = 55; // ponytail: HUD layer by default; elevated to 850 when modal open
 
             CanvasScaler scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -261,7 +277,7 @@ namespace Plunderlust.UI
             textRt.sizeDelta = Vector2.zero;
 
             _hudButtonText = textGo.AddComponent<Text>();
-            _hudButtonText.text = "⏸ <b>PAUSE</b>";
+            _hudButtonText.text = "<b>PAUSE</b>";
             _hudButtonText.font = GetDefaultFont();
             _hudButtonText.fontSize = 15;
             _hudButtonText.alignment = TextAnchor.MiddleCenter;

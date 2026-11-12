@@ -128,6 +128,13 @@ namespace Plunderlust.Ship
         /// </summary>
         public bool SetSailState(SailState newState)
         {
+            // Rowing-only vessels (e.g. Tier 1 Leaky Rowboat) map any underway demand to Rowing
+            if (_hullData != null && _hullData.SupportsRowing && !_hullData.SupportsSails)
+            {
+                _currentSailState = (newState == SailState.Anchored) ? SailState.Anchored : SailState.Rowing;
+                return true;
+            }
+
             if (_subsystemProvider != null && _subsystemProvider.IsSailsCrippled && newState == SailState.FullCanvas)
             {
                 // Cannot raise full canvas when rigging is critically broken
@@ -218,9 +225,9 @@ namespace Plunderlust.Ship
                 }
                 else if (_currentSailState == SailState.Rowing)
                 {
-                    // Rowboat oar propulsion: manual human muscle always drives forward, slightly assisted or hindered by wind
+                    // ponytail: rowboats have no sails; human oars are primary and wind has minimal impact (+/- 5%)
                     float dot = Vector3.Dot(transform.forward, WindManager.Instance.WindDirection);
-                    _windEfficiency = Mathf.Clamp(1.0f + (dot * 0.25f * WindManager.Instance.WindStrength), 0.75f, 1.25f);
+                    _windEfficiency = Mathf.Clamp(1.0f + (dot * 0.05f * WindManager.Instance.WindStrength), 0.95f, 1.05f);
                 }
                 else
                 {
@@ -339,7 +346,8 @@ namespace Plunderlust.Ship
                     float forwardDeficit = targetSpeed - currentForwardSpeed;
                     if (forwardDeficit > 0.05f)
                     {
-                        float thrustFactor = Mathf.Clamp01(forwardDeficit / 1.5f);
+                        // ponytail: tighter deficit divisor (0.35f) so rowboat/ship reaches full target speed
+                        float thrustFactor = Mathf.Clamp01(forwardDeficit / 0.35f);
                         _effectiveThrust = thrustFactor * _forwardAcceleration * stateThrustScale * _rb.mass;
                         _forwardThrustForce = horizontalForward * _effectiveThrust;
                         _forwardThrustForce.y = 0f; // STRICTLY ZERO vertical thrust

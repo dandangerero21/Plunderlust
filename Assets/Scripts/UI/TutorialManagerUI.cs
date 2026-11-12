@@ -318,7 +318,7 @@ namespace Plunderlust.UI
             if (_btnPrev != null) _btnPrev.interactable = (_currentPage > 0);
             if (_txtNextBtnLabel != null)
             {
-                _txtNextBtnLabel.text = (_currentPage == 3) ? "SET SAIL, CAPTAIN!" : "NEXT CHAPTER ▶";
+                _txtNextBtnLabel.text = (_currentPage == 3) ? "SET SAIL, CAPTAIN!" : "NEXT CHAPTER >";
             }
         }
 
@@ -525,14 +525,14 @@ namespace Plunderlust.UI
             if (_txtOrderStep1 != null)
             {
                 _txtOrderStep1.text = _step1Done
-                    ? "<color=#27AE60>✔</color> <color=#8C9B90><i>Hoist Canvas: Set Full Canvas</i></color>"
+                    ? "<color=#27AE60>[OK]</color> <color=#8C9B90><i>Hoist Canvas: Set Full Canvas</i></color>"
                     : "<color=#FFD700>1.</color> <b>Hoist Canvas:</b> Set Full Canvas (W key or Lever)";
             }
 
             if (_txtOrderStep2 != null)
             {
                 _txtOrderStep2.text = _step2Done
-                    ? "<color=#27AE60>✔</color> <color=#8C9B90><i>Turn the Helm: Steer Port or Starboard</i></color>"
+                    ? "<color=#27AE60>[OK]</color> <color=#8C9B90><i>Turn the Helm: Steer Port or Starboard</i></color>"
                     : _step1Done
                         ? "<color=#FFD700>2.</color> <b>Turn the Helm:</b> Steer Port or Starboard (A/D or Wheel)"
                         : "<color=#888888>2. Turn the Helm: Steer Port or Starboard</color>";
@@ -541,7 +541,7 @@ namespace Plunderlust.UI
             if (_txtOrderStep3 != null)
             {
                 _txtOrderStep3.text = _step3Done
-                    ? "<color=#27AE60>✔</color> <color=#8C9B90><i>Test Cannons: Broadside fired</i></color>"
+                    ? "<color=#27AE60>[OK]</color> <color=#8C9B90><i>Test Cannons: Broadside fired</i></color>"
                     : _step2Done
                         ? "<color=#FFD700>3.</color> <b>Test Cannons:</b> Fire a broadside (Space / Q / E or Fire button)"
                         : "<color=#888888>3. Test Cannons: Fire broadside battery</color>";
@@ -550,7 +550,7 @@ namespace Plunderlust.UI
             if (_txtOrderStep4 != null)
             {
                 _txtOrderStep4.text = _step4Done
-                    ? "<color=#27AE60>✔</color> <color=#8C9B90><i>Navigate: Sea Chart charted</i></color>"
+                    ? "<color=#27AE60>[OK]</color> <color=#8C9B90><i>Navigate: Sea Chart charted</i></color>"
                     : _step3Done
                         ? "<color=#FFD700>4.</color> <b>Navigate:</b> Open the Sea Chart (M key or Map icon)"
                         : "<color=#888888>4. Navigate: Open Sea Chart</color>";
@@ -667,8 +667,13 @@ namespace Plunderlust.UI
             tTxt.color = new Color(0.18f, 0.12f, 0.08f);
             tTxt.text = "THE CAPTAIN'S LOG & NAVAL PRIMER";
 
-            // Skip Tutorial Button (top right corner of parchment)
-            _btnSkip = CreateSubtleButton(parchmentGo.transform, new Vector2(380f, 260f), "SKIP TUTORIAL [X]", ClosePrimerModal, 175f, 36f);
+            // Skip Tutorial Button (top right corner of parchment, cleanly anchored and non-spilling)
+            _btnSkip = CreateSubtleButton(parchmentGo.transform, Vector2.zero, "SKIP [X]", ClosePrimerModal, 125f, 34f);
+            RectTransform skipRt = _btnSkip.GetComponent<RectTransform>();
+            skipRt.anchorMin = new Vector2(1f, 1f);
+            skipRt.anchorMax = new Vector2(1f, 1f);
+            skipRt.pivot = new Vector2(1f, 1f);
+            skipRt.anchoredPosition = new Vector2(-14f, -14f);
 
             // 5. Chapter Pill Tabs
             string[] tabNames = { "1. HELM", "2. WIND", "3. CANNONS", "4. PORTS" };
@@ -782,7 +787,7 @@ namespace Plunderlust.UI
             _txtProTip.color = new Color(0.20f, 0.15f, 0.10f);
 
             // 7. Bottom Navigation Bar
-            _btnPrev = CreateNavButton(parchmentGo.transform, new Vector2(-280f, -245f), "◀ PREVIOUS", HandlePrevClicked, false);
+            _btnPrev = CreateNavButton(parchmentGo.transform, new Vector2(-280f, -245f), "< PREVIOUS", HandlePrevClicked, false);
 
             GameObject pageIndGo = new GameObject("PageIndicator");
             pageIndGo.transform.SetParent(parchmentGo.transform, false);
@@ -797,7 +802,7 @@ namespace Plunderlust.UI
             _txtPageIndicator.color = new Color(0.38f, 0.30f, 0.20f);
             _txtPageIndicator.text = "CHAPTER 1 OF 4";
 
-            _btnNext = CreateNavButton(parchmentGo.transform, new Vector2(280f, -245f), "NEXT CHAPTER ▶", HandleNextClicked, true, out _txtNextBtnLabel);
+            _btnNext = CreateNavButton(parchmentGo.transform, new Vector2(280f, -245f), "NEXT CHAPTER >", HandleNextClicked, true, out _txtNextBtnLabel);
 
             // Initially hidden
             _modalBackdropGo.SetActive(false);
@@ -862,7 +867,7 @@ namespace Plunderlust.UI
             hTxt.fontStyle = FontStyle.Bold;
             hTxt.alignment = TextAnchor.MiddleLeft;
             hTxt.color = NauticalUITheme.GoldAccent;
-            hTxt.text = "⚓ CAPTAIN'S ORDERS (TUTORIAL)";
+            hTxt.text = "CAPTAIN'S ORDERS (TUTORIAL)";
 
             // Toggle / Hide Button (Right-aligned)
             _btnToggleOrders = CreateSubtleButton(headerRowGo.transform, Vector2.zero, "[-] HIDE", ToggleOrdersCollapse, 115f, 32f, out _txtToggleOrdersLabel);

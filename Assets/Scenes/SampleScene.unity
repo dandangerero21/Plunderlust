@@ -5722,7 +5722,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.CameraControl.NavalCameraController
   _target: {fileID: 705911402}
   _targetRigidbody: {fileID: 705911401}
-  _pitchAngle: 52
+  _pitchAngle: 30
   _distance: 15
   _targetHeightOffset: 1
   _positionFollowSpeed: 6
@@ -5730,7 +5730,7 @@ MonoBehaviour:
   _velocityLeadMultiplier: 0.6
   _maxVelocityLead: 8
   _minDistance: 9
-  _maxDistance: 35
+  _maxDistance: 25
   _zoomSpeed: 4
   _traumaDecayRate: 1.4
   _maxShakeOffset: 0.65
@@ -6258,21 +6258,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 367142527}
   m_CullTransparentMesh: 1
---- !u!115 &371155183
-MonoScript:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 7
-  m_DefaultReferences: {}
-  m_Icon: {fileID: 0}
-  m_Type: 0
-  m_ExecutionOrder: 0
-  m_ClassName: IslandLandmassBarrier/TriggerRelay
-  m_Namespace: Plunderlust.World
-  m_AssemblyName: Assembly-CSharp
 --- !u!1 &374783921
 GameObject:
   m_ObjectHideFlags: 0
@@ -8795,9 +8780,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 498449880}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 371155183}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 2061582741}
 --- !u!65 &498449883
 BoxCollider:
@@ -11456,9 +11441,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 678543997}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 371155183}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 1183879606}
 --- !u!65 &678544000
 BoxCollider:
@@ -12046,8 +12031,8 @@ MonoBehaviour:
   _currentSailState: 1
   _fullCanvasMaxSpeed: 5.5
   _battleSailsMaxSpeed: 4.8
-  _rowingSpeed: 5.8
-  _forwardAcceleration: 7
+  _rowingSpeed: 7.8
+  _forwardAcceleration: 8
   _reverseSpeed: 2
   _reverseAcceleration: 3.5
   _rudderTorque: 8.5
@@ -21226,9 +21211,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1114770586}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 1706155919}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 2010561870}
 --- !u!65 &1114770589
 BoxCollider:
@@ -21973,9 +21958,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1147345857}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 371155183}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 1889636080}
 --- !u!65 &1147345860
 BoxCollider:
@@ -27827,9 +27812,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1576239633}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 371155183}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 1210043761}
 --- !u!65 &1576239636
 BoxCollider:
@@ -28827,6 +28812,7 @@ MonoBehaviour:
   _currentZoneWidth: 45
   _restorativeCurrentPower: 18
   _barrierReefSpacing: 48
+  _showPerimeterVisuals: 0
 --- !u!4 &1604793160
 Transform:
   m_ObjectHideFlags: 0
@@ -30793,9 +30779,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1697213982}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 371155183}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 103410558}
 --- !u!65 &1697213985
 BoxCollider:
@@ -30931,21 +30917,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1701440476}
   m_Mesh: {fileID: -7699666271181864620, guid: c806bbd1904d93b46a2f4ae239f299d2, type: 3}
---- !u!115 &1706155919
-MonoScript:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 7
-  m_DefaultReferences: {}
-  m_Icon: {fileID: 0}
-  m_Type: 0
-  m_ExecutionOrder: 0
-  m_ClassName: IslandLandmassBarrier/TriggerRelay
-  m_Namespace: Plunderlust.World
-  m_AssemblyName: Assembly-CSharp
 --- !u!1 &1710804730
 GameObject:
   m_ObjectHideFlags: 0
@@ -31847,9 +31818,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1753025909}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 371155183}
+  m_Script: {fileID: 11500000, guid: b74e8912c982463fa7180295da931f72, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.IslandLandmassBarrier/TriggerRelay
+  m_EditorClassIdentifier: Assembly-CSharp::Plunderlust.World.CoastalTriggerRelay
   TargetBarrier: {fileID: 1472286092}
 --- !u!65 &1753025912
 BoxCollider:

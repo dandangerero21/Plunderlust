@@ -134,15 +134,17 @@ namespace Plunderlust.Shipyard
         {
             if (!_isPlayerInSlipway) return;
             if (ShipyardView.Instance != null && ShipyardView.Instance.IsOpen) return;
+            if (UI.SeaChartMapUI.Instance != null && UI.SeaChartMapUI.Instance.IsOpen) return;
+            if (UI.ShipInventoryModalUI.Instance != null && UI.ShipInventoryModalUI.Instance.IsOpen) return;
 
             // Screen-space prominent action button
-            float btnWidth = 360f;
-            float btnHeight = 40f;
+            float btnWidth = Mathf.Clamp(Screen.width * 0.45f, 380f, 540f);
+            float btnHeight = 56f;
             float btnX = (Screen.width - btnWidth) * 0.5f;
-            float btnY = Screen.height - 132f;
+            float btnY = Screen.height - 160f;
 
             GUIStyle btnStyle = Port.PortIslandHaven.GetMooringBtnStyle();
-            if (GUI.Button(new Rect(btnX, btnY, btnWidth, btnHeight), $"🛠️ ENTER {_shipyardName.ToUpper()}", btnStyle))
+            if (GUI.Button(new Rect(btnX, btnY, btnWidth, btnHeight), $"ENTER {_shipyardName.ToUpper()}", btnStyle))
             {
                 ToggleShipyard();
             }

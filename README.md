@@ -16,8 +16,9 @@ Plunderlust is a stylized low-poly naval tactical action RPG and sailing simulat
   - Gerstner Ocean Simulation and Wind System
   - Subsystem Integrity and Flooding Mechanics
   - Naval Ballistics and Combat
-  - Infinite World Streaming and Floating Origin
-  - Port Economy and Tavern Crew Recruitment
+  - Infinite World Streaming, Map Boundaries, and AI Fleet
+  - Port Economy, Bounty Contracts, and Tavern Recruitment
+  - Dynamic Audio Architecture
   - Dual-Platform UI and Input Architecture
 - Control Schemes
   - Desktop Controls
@@ -50,10 +51,11 @@ The project emphasizes mechanical depth over arcade abstractions: ships obey rea
 - Subsystem Damage Model: Cannonballs inflict localized damage to the Hull, Rigging and Sails, Rudder, and Gun Deck, dynamically altering ship handling and firing capacity.
 - Progressive Flooding and Bilge Management: Breached hulls take on ocean water, increasing displacement mass and causing the vessel to list, wallow, and eventually sink if not repaired.
 - Tactical Ballistics: Broadside and swivel gun ballistics featuring parabolic arcs, travel times, splash effects on misses, and projectile pooling for zero-allocation performance.
-- Dynamic Port Economy: Port Haven, Smuggler's Cove, and Tortuga feature localized supply and demand markets for trade goods including Rum, Sugar, Spices, Tobacco, Canvas, and Shot.
+- Dynamic Port Economy & Bounty Board: Port Haven, Smuggler's Cove, and Tortuga feature localized supply/demand markets (Rum, Sugar, Spices, Tobacco, Canvas, Shot) alongside high-paying Bounty Contracts with target tracking and solitary contract limits.
 - Crew Management and Officers: Hire specialist officers (Sailing Master, Master Gunner, Ship's Carpenter, Quartermaster) providing passive stat enhancements and mechanical perks.
-- Marine Wildlife and Atmosphere: Living ocean populated by dolphins, sharks, sea birds, and flotsam salvage crates.
-- Cross-Platform Design: Unified codebase supporting standard desktop keyboard/mouse setups and specialized mobile touch layouts with virtual rudder wheels and engine order telegraphs.
+- Vast Living Ocean & Wildlife: 2,800m dynamic Gerstner ocean mesh with non-linear vertex distribution, invisible restorative boundary currents, and a living sea populated by dolphins, sharks, sea birds, and flotsam salvage crates.
+- Dynamic Voyage Audio: Multi-track nautical background music playlist shuffling atmospheric sea shanties and open-ocean themes.
+- Cross-Platform Design: Unified codebase supporting desktop keyboard/mouse setups and specialized mobile touch layouts with virtual helm, engine order telegraph, high-DPI port menus, and touch-shielded sea chart navigation.
 
 ---
 
@@ -63,7 +65,8 @@ Plunderlust features six distinct vessel classes defined through ScriptableObjec
 
 1. Tier 1: Leaky Rowboat (Tide Skimmer)
    - Role: Fragile starter vessel equipped with oars and a single forward swivel gun.
-   - Propulsion: Pure rowing propulsion. Immune to headwind penalties; low top speed and high vulnerability to ocean leaks.
+   - Propulsion: Pure rowing propulsion with rhythmic oar stroke animations. Immune to headwind penalties; balanced tactical speed tuned to outpace hostile rowboat corsairs.
+   - Armament: Forward swivel gun with dedicated aimed touch/spacebar trigger.
    - Crew Capacity: 2
 
 2. Tier 2: Coastal Sloop (The Barnacle)
@@ -127,7 +130,8 @@ Assets/Scripts/
 ### Gerstner Ocean Simulation and Wind System
 
 - OceanWaveManager.cs: Implements multi-harmonic Gerstner wave equations calculating three-dimensional vertex displacements (X, Y, Z) and surface normal vectors based on amplitude, wavelength, speed, and directional vectors.
-- WaterGrid.cs: Manages ocean mesh geometry centered around the active player, updating vertex heights to align with the underlying wave mathematics.
+- WaterGrid.cs: Manages dynamic low-poly ocean mesh geometry centered around the player, scaled to an expansive 2,800-meter span with non-linear power-curve vertex density (dense 3-5m spacing near the vessel and a sweeping skirt toward the horizon).
+- StylizedOcean.shader: Custom URP shader with analytical Gerstner wave displacement, multi-tone Caribbean gradients (shallow turquoise to deep sapphire), animated Voronoi crystalline caustics, wave crest whitecaps, and smooth horizon atmospheric fog blending.
 - WindManager.cs: Simulates regional wind velocity and heading. Ships calculate apparent wind angle relative to vessel heading to determine sail propulsion efficiency.
 
 ### Subsystem Integrity and Flooding Mechanics
@@ -141,26 +145,35 @@ Assets/Scripts/
 
 ### Naval Ballistics and Combat
 
-- NavalCombatController.cs: Coordinates port and starboard broadside batteries as well as bow/stern swivel guns. Calculates firing arcs, cooldowns, and crew reload cycles.
+- NavalCombatController.cs: Coordinates port and starboard broadside batteries as well as bow/stern swivel guns. Calculates firing arcs, cooldowns, and crew reload cycles. Supports both Tier 1 forward swivel gun aiming and Tier 2-6 multi-battery volleys.
 - CannonballProjectile.cs: Simulates physical projectile motion under gravity, water entry impacts, and collision tests against target ship subsystem bounding colliders.
 - ProjectilePool.cs: High-capacity object pool reusing cannonball GameObjects and visual effect prefabs to prevent garbage collection allocation spikes during engagements.
 
-### Infinite World Streaming and Floating Origin
+### Infinite World Streaming, Map Boundaries, and AI Fleet
 
 - WorldChunkManager.cs: Divides the game sea into a modular coordinate grid, instantiating and unloading environment chunks, islands, and wildlife relative to player position.
 - FloatingOrigin.cs: Resets world coordinate space when the player moves far from the origin, ensuring floating-point precision remains stable across long voyages.
+- MapBoundaryBarrier.cs: Provides an invisible ocean perimeter with box colliders and smooth restorative inward ocean currents at a 650m radius, turning stray vessels back into the archipelago without artificial rock walls so the sea appears endless.
 - IslandLandmassBarrier.cs: Employs steering force fields and perimeter colliders around island landmasses to prevent player and NPC ships from running aground into geometry.
+- NavalAIManager.cs: Simulates 10–12 active NPC ships patrolling trade routes, naval corridors, and corsair lanes, with dynamic player-tier scaling, animated oar rowing for skiffs, and swivel gun combat.
+- OceanFloraAndFaunaDirector.cs: Populates the living sea with dolphins (featuring momentum-conserving leap physics), flying fish schools, sea birds, and floating flotsam salvage.
 
-### Port Economy and Tavern Crew Recruitment
+### Port Economy, Bounty Contracts, and Tavern Recruitment
 
 - DynamicMarketEconomy.cs: Simulates fluctuating commodity price indices influenced by supply, demand, and localized trade routes.
 - PortIslandHaven.cs: Handles docking zones, drydock ship repairs, ship purchasing, and cargo unloading.
+- BountyBoardManager.cs & Bounty Board UI: Allows players to accept high-paying bounty hunting contracts at ports. Tracks an exclusive active bounty at a time, spawning high-value targets across designated naval sectors and rewarding substantial gold and renown upon target destruction.
 - Tavern Recruitment: Allows players to contract specialist officers who grant modifiers to sail repair speed, cannon reload rates, and trading margins.
+
+### Dynamic Audio Architecture
+
+- NauticalAudioManager.cs: Manages positional audio, cannon reverberations, wave surf, and an intelligent voyage BGM playlist system that shuffles multi-track sea shanties and atmospheric sailing melodies during open ocean transit.
 
 ### Dual-Platform UI and Input Architecture
 
 - ShipPaperDollUI.cs: Visual tactical display illustrating real-time subsystem integrity, bilge water levels, and speed readings.
-- NavalMinimapAndChart.cs & SeaChartMapUI.cs: Real-time compass rose displaying wind heading, player orientation, detected vessels, and uncharted islands.
+- NavalMinimapAndChart.cs & SeaChartMapUI.cs: Real-time compass rose displaying wind heading, player orientation, detected vessels, and uncharted islands. Features touch-shielding to prevent underlying HUD button misfires during chart panning and zooming.
+- Port Mooring Views: High-DPI responsive layouts for Tavern, Market, Shipyard, and Bounty Board modals, formatted for crisp readability on mobile displays with zero text clipping.
 - MobileInputBridge.cs: Connects the virtual steering wheel, throttle slider (REV, ANCH, HALF, FULL), and touch fire buttons to the core ship movement controllers without modifying physics code.
 
 ---
